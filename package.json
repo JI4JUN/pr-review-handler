@@ -1,6 +1,6 @@
 {
   "name": "@trashcodermaker/pi-pr-review-handler",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Systematically process GitHub PR review comments: triage for validity, fix code, and post replies.",
   "type": "module",
   "license": "MIT",
@@ -19,6 +19,7 @@
     "SKILL.md",
     "agents",
     "README.md",
+    "README.zh.md",
     "LICENSE"
   ]
 }
