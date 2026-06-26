@@ -6,7 +6,7 @@
 # PR Review Handler
 
 [![Build Status](https://img.shields.io/github/actions/workflow/status/JI4JUN/pr-review-handler/ci.yml?style=flat-square&label=Build)](https://github.com/JI4JUN/pr-review-handler/actions)
-[![npm version](https://img.shields.io/npm/v/@JI4JUN/pi-pr-review-handler?style=flat-square)](https://www.npmjs.com/package/@JI4JUN/pi-pr-review-handler)
+[![npm version](https://img.shields.io/npm/v/@trashcodermaker/pi-pr-review-handler?style=flat-square)](https://www.npmjs.com/package/@trashcodermaker/pi-pr-review-handler)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
 > 系统地处理 GitHub PR review 评论：判断有效性、修复代码、发布回复。
@@ -32,13 +32,13 @@ Code Review 是健康 PR 流程的一部分，但把 review 评论转化为实�
 ### 作为 npm 包安装
 
 ```bash
-npm install @JI4JUN/pi-pr-review-handler
+npm install @trashcodermaker/pi-pr-review-handler
 ```
 
 ### 作为 Pi 包安装
 
 ```bash
-pi install @JI4JUN/pi-pr-review-handler
+pi install @trashcodermaker/pi-pr-review-handler
 ```
 
 ### 通过 skill.sh 安装

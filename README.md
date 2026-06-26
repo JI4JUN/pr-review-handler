@@ -6,7 +6,7 @@
 # PR Review Handler
 
 [![Build Status](https://img.shields.io/github/actions/workflow/status/JI4JUN/pr-review-handler/ci.yml?style=flat-square&label=Build)](https://github.com/JI4JUN/pr-review-handler/actions)
-[![npm version](https://img.shields.io/npm/v/@JI4JUN/pi-pr-review-handler?style=flat-square)](https://www.npmjs.com/package/@JI4JUN/pi-pr-review-handler)
+[![npm version](https://img.shields.io/npm/v/@trashcodermaker/pi-pr-review-handler?style=flat-square)](https://www.npmjs.com/package/@trashcodermaker/pi-pr-review-handler)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
 > Systematically process GitHub PR review comments: triage for validity, fix code, and post replies.
@@ -32,13 +32,13 @@ It can be used as an npm package, a Pi package, a Pi skill, or embedded into oth
 ### Install as an npm package
 
 ```bash
-npm install @JI4JUN/pi-pr-review-handler
+npm install @trashcodermaker/pi-pr-review-handler
 ```
 
 ### Install as a Pi package
 
 ```bash
-pi install @JI4JUN/pi-pr-review-handler
+pi install @trashcodermaker/pi-pr-review-handler
 ```
 
 ### Install from skill.sh
