@@ -1,0 +1,23 @@
+{
+  "name": "@JI4JUN/pi-pr-review-handler",
+  "version": "1.0.0",
+  "type": "module",
+  "license": "MIT",
+  "private": false,
+  "keywords": [
+    "pi-package",
+    "pi-skill",
+    "pr-review",
+    "github",
+    "code-review"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "SKILL.md",
+    "agents",
+    "README.md",
+    "LICENSE"
+  ]
+}
