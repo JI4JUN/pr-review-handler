@@ -1,23 +1,16 @@
-<!-- prettier-ignore -->
-<div align="center">
-
-<!-- No project-specific icon found; skip the header image. -->
-
 # PR Review Handler
+
+> Systematically process GitHub PR review comments: triage for validity, fix code, and post replies.
 
 [![Build Status](https://img.shields.io/github/actions/workflow/status/JI4JUN/pr-review-handler/ci.yml?style=flat-square&label=Build)](https://github.com/JI4JUN/pr-review-handler/actions)
 [![npm version](https://img.shields.io/npm/v/@trashcodermaker/pi-pr-review-handler?style=flat-square)](https://www.npmjs.com/package/@trashcodermaker/pi-pr-review-handler)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
-> Systematically process GitHub PR review comments: triage for validity, fix code, and post replies.
->
-> [中文版](./README.zh.md)
-
 ⭐ If you like this project, star it on GitHub — it helps a lot!
 
 [Overview](#overview) • [Getting started](#getting-started) • [How it works](#how-it-works) • [Usage](#usage) • [Requirements](#requirements) • [Supported platforms](#supported-platforms)
 
-</div>
+[中文版](./README.zh.md)
 
 ## Overview
 

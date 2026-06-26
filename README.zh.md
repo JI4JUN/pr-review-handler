@@ -1,23 +1,16 @@
-<!-- prettier-ignore -->
-<div align="center">
-
-<!-- 项目中未发现专用图标，因此跳过顶部图片。 -->
-
 # PR Review Handler
+
+> 系统地处理 GitHub PR review 评论：判断有效性、修复代码、发布回复。
 
 [![Build Status](https://img.shields.io/github/actions/workflow/status/JI4JUN/pr-review-handler/ci.yml?style=flat-square&label=Build)](https://github.com/JI4JUN/pr-review-handler/actions)
 [![npm version](https://img.shields.io/npm/v/@trashcodermaker/pi-pr-review-handler?style=flat-square)](https://www.npmjs.com/package/@trashcodermaker/pi-pr-review-handler)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
-> 系统地处理 GitHub PR review 评论：判断有效性、修复代码、发布回复。
->
-> [English version](./README.md)
-
 ⭐ 如果这个项目对你有帮助，欢迎在 GitHub 上点个 star！
 
 [项目简介](#项目简介) • [快速开始](#快速开始) • [工作原理](#工作原理) • [使用方法](#使用方法) • [环境要求](#环境要求) • [支持的平台](#支持的平台)
 
-</div>
+[English version](./README.md)
 
 ## 项目简介
 
