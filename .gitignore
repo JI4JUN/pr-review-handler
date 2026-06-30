@@ -4,3 +4,4 @@ node_modules
 
 # Synced skill copies — generated from skills/pr-review-handler/ by sync-skill.mjs
 packages/*/skills/
+.tmp
