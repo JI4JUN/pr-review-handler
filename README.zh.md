@@ -53,7 +53,7 @@ pi install npm:@trashcodermaker/pi-pr-review-handler
 ### 通过 skills CLI 安装（任意 agent 框架）
 
 ```bash
-npx skills add JI4JUN/pr-review-handler
+npx skills add JI4JUN/pr-review-handler --skill pr-review-handler
 ```
 
 该命令会克隆仓库并把 skill（含 `agents/` 规格）复制到你的 agent skills 目录。
@@ -218,7 +218,7 @@ npm run publish:core    # 或 npm run publish:pi
 | Claude Code | ✅ Task 机制分发，或 `npx skills add` |
 | Cursor | ✅ background agent 分发 |
 | Gemini CLI / OpenCode / 其他 | ✅ 原生子任务机制，或内联回退 |
-| skills CLI | ✅ `npx skills add JI4JUN/pr-review-handler` |
+| skills CLI | ✅ `npx skills add JI4JUN/pr-review-handler --skill pr-review-handler` |
 
 ## 备注
 

@@ -40,7 +40,7 @@ npm install @trashcodermaker/pr-review-handler
 Or grab the skill directly:
 
 ```bash
-npx skills add JI4JUN/pr-review-handler
+npx skills add JI4JUN/pr-review-handler --skill pr-review-handler
 ```
 
 ## License

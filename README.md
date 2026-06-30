@@ -56,7 +56,7 @@ pi install npm:@trashcodermaker/pi-pr-review-handler
 ### Install via skills CLI (any agent harness)
 
 ```bash
-npx skills add JI4JUN/pr-review-handler
+npx skills add JI4JUN/pr-review-handler --skill pr-review-handler
 ```
 
 This clones the repo and copies the skill into your agent's skills directory,
@@ -234,7 +234,7 @@ into an agent-friendly pipeline.
 | Claude Code | ✅ Task-based agent dispatch, or `npx skills add` |
 | Cursor | ✅ Background agent dispatch |
 | Gemini CLI / OpenCode / others | ✅ Native subtask mechanism, or inline fallback |
-| skills CLI | ✅ `npx skills add JI4JUN/pr-review-handler` |
+| skills CLI | ✅ `npx skills add JI4JUN/pr-review-handler --skill pr-review-handler` |
 
 ## Notes
 
