@@ -1,6 +1,6 @@
 {
   "name": "@trashcodermaker/pi-pr-review-handler",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Systematically process GitHub PR review comments: triage for validity, fix code, and post replies.",
   "type": "module",
   "license": "MIT",
@@ -21,5 +21,13 @@
     "README.md",
     "README.zh.md",
     "LICENSE"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JI4JUN/pr-review-handler.git"
+  },
+  "homepage": "https://github.com/JI4JUN/pr-review-handler#readme",
+  "bugs": {
+    "url": "https://github.com/JI4JUN/pr-review-handler/issues"
+  }
 }
