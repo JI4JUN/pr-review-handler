@@ -189,7 +189,7 @@ control.
 
 Publishing is driven by tags (or `workflow_dispatch`):
 
-- `core-v1.0.1` → publishes `packages/core`
+- `core-v1.1.0` → publishes `packages/core`
 - `pi-v1.1.0` → publishes `packages/pi`
 
 Locally:

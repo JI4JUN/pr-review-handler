@@ -175,7 +175,7 @@ pr-review-handler/
 
 发布由 tag 驱动（也可用 `workflow_dispatch`）：
 
-- `core-v1.0.1` → 发布 `packages/core`
+- `core-v1.1.0` → 发布 `packages/core`
 - `pi-v1.1.0` → 发布 `packages/pi`
 
 本地发布：
