@@ -1,4 +1,4 @@
-# pr-review-handler
+# @trashcodermaker/pr-review-handler
 
 > Systematically process GitHub PR review comments: triage for validity, fix code, and post replies.
 
@@ -9,13 +9,13 @@ Looking for the **Pi-specific package**? See [`@trashcodermaker/pi-pr-review-han
 ## Install
 
 ```bash
-npm install pr-review-handler
+npm install @trashcodermaker/pr-review-handler
 ```
 
 ## What you get
 
 ```
-node_modules/pr-review-handler/
+node_modules/@trashcodermaker/pr-review-handler/
 └── skills/
     └── pr-review-handler/
         ├── SKILL.md              # the skill instructions
@@ -24,7 +24,7 @@ node_modules/pr-review-handler/
             └── implementation-agent.md
 ```
 
-Point your agent at `node_modules/pr-review-handler/skills/pr-review-handler/SKILL.md`, or copy the `skills/pr-review-handler/` directory into your agent's skill discovery path.
+Point your agent at `node_modules/@trashcodermaker/pr-review-handler/skills/pr-review-handler/SKILL.md`, or copy the `skills/pr-review-handler/` directory into your agent's skill discovery path.
 
 ## How it works
 

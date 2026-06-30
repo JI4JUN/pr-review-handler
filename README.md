@@ -5,7 +5,7 @@
 📦 **Repository**: <https://github.com/JI4JUN/pr-review-handler>
 
 [![Build Status](https://img.shields.io/github/actions/workflow/status/JI4JUN/pr-review-handler/publish.yml?style=flat-square&label=Build)](https://github.com/JI4JUN/pr-review-handler/actions)
-[![npm version](https://img.shields.io/npm/v/pr-review-handler?style=flat-square&label=pr-review-handler)](https://www.npmjs.com/package/pr-review-handler)
+[![npm version](https://img.shields.io/npm/v/@trashcodermaker/pr-review-handler?style=flat-square&label=%40trashcodermaker%2Fpr-review-handler)](https://www.npmjs.com/package/@trashcodermaker/pr-review-handler)
 [![npm version](https://img.shields.io/npm/v/@trashcodermaker/pi-pr-review-handler?style=flat-square&label=%40trashcodermaker%2Fpi-pr-review-handler)](https://www.npmjs.com/package/@trashcodermaker/pi-pr-review-handler)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
@@ -32,7 +32,7 @@ one meant for it.
 
 | Package | npm name | Install command | Audience |
 | --- | --- | --- | --- |
-| Core | `pr-review-handler` | `npm install pr-review-handler` | Any agent harness |
+| Core | `@trashcodermaker/pr-review-handler` | `npm install @trashcodermaker/pr-review-handler` | Any agent harness |
 | Pi | `@trashcodermaker/pi-pr-review-handler` | `pi install npm:@trashcodermaker/pi-pr-review-handler` | Pi users |
 
 Use the **Core** package unless you install skills through Pi. The **Pi**
@@ -44,7 +44,7 @@ the Pi package gallery (`pi-package` keyword).
 ### Install as an npm package (any agent)
 
 ```bash
-npm install pr-review-handler
+npm install @trashcodermaker/pr-review-handler
 ```
 
 ### Install as a Pi package
@@ -172,7 +172,7 @@ pr-review-handler/
 │       ├── SKILL.md
 │       └── agents/             # triage + implementation agent specs
 ├── packages/
-│   ├── core/                   # → npm: pr-review-handler
+│   ├── core/                   # → npm: @trashcodermaker/pr-review-handler
 │   └── pi/                     # → npm: @trashcodermaker/pi-pr-review-handler
 ├── scripts/
 │   └── sync-skill.mjs          # copies the skill into each package at publish
@@ -189,7 +189,7 @@ control.
 
 Publishing is driven by tags (or `workflow_dispatch`):
 
-- `core-v1.0.0` → publishes `packages/core`
+- `core-v1.0.1` → publishes `packages/core`
 - `pi-v1.1.0` → publishes `packages/pi`
 
 Locally:
@@ -229,7 +229,7 @@ into an agent-friendly pipeline.
 
 | Platform | Support |
 | --- | --- |
-| npm / Node.js | ✅ Install `pr-review-handler` as a published package |
+| npm / Node.js | ✅ Install `@trashcodermaker/pr-review-handler` as a published package |
 | Pi | ✅ Install `@trashcodermaker/pi-pr-review-handler` via `pi install` |
 | Claude Code | ✅ Task-based agent dispatch, or `npx skills add` |
 | Cursor | ✅ Background agent dispatch |

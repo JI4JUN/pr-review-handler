@@ -34,7 +34,7 @@ Checkpoints pause for confirmation after triage verdicts and before posting repl
 This is the Pi-scoped package. If you use Claude Code, Cursor, Gemini CLI, OpenCode, or another harness, install the generic package instead:
 
 ```bash
-npm install pr-review-handler
+npm install @trashcodermaker/pr-review-handler
 ```
 
 Or grab the skill directly:

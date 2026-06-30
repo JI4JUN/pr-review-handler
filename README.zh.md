@@ -5,7 +5,7 @@
 📦 **仓库地址**: <https://github.com/JI4JUN/pr-review-handler>
 
 [![Build Status](https://img.shields.io/github/actions/workflow/status/JI4JUN/pr-review-handler/publish.yml?style=flat-square&label=Build)](https://github.com/JI4JUN/pr-review-handler/actions)
-[![npm version](https://img.shields.io/npm/v/pr-review-handler?style=flat-square&label=pr-review-handler)](https://www.npmjs.com/package/pr-review-handler)
+[![npm version](https://img.shields.io/npm/v/@trashcodermaker/pr-review-handler?style=flat-square&label=%40trashcodermaker%2Fpr-review-handler)](https://www.npmjs.com/package/@trashcodermaker/pr-review-handler)
 [![npm version](https://img.shields.io/npm/v/@trashcodermaker/pi-pr-review-handler?style=flat-square&label=%40trashcodermaker%2Fpi-pr-review-handler)](https://www.npmjs.com/package/@trashcodermaker/pi-pr-review-handler)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
@@ -30,7 +30,7 @@ Code Review 是健康 PR 流程的一部分，但把 review 评论转化为实�
 
 | 包 | npm 名称 | 安装命令 | 适用人群 |
 | --- | --- | --- | --- |
-| Core | `pr-review-handler` | `npm install pr-review-handler` | 任意 agent 框架 |
+| Core | `@trashcodermaker/pr-review-handler` | `npm install @trashcodermaker/pr-review-handler` | 任意 agent 框架 |
 | Pi | `@trashcodermaker/pi-pr-review-handler` | `pi install npm:@trashcodermaker/pi-pr-review-handler` | Pi 用户 |
 
 除非你通过 Pi 安装 skill，否则请使用 **Core** 包。**Pi** 包的存在是为了让 Pi
@@ -41,7 +41,7 @@ Code Review 是健康 PR 流程的一部分，但把 review 评论转化为实�
 ### 作为 npm 包安装（任意 agent）
 
 ```bash
-npm install pr-review-handler
+npm install @trashcodermaker/pr-review-handler
 ```
 
 ### 作为 Pi 包安装
@@ -159,7 +159,7 @@ pr-review-handler/
 │       ├── SKILL.md
 │       └── agents/             # triage + implementation agent 规格
 ├── packages/
-│   ├── core/                   # → npm: pr-review-handler
+│   ├── core/                   # → npm: @trashcodermaker/pr-review-handler
 │   └── pi/                     # → npm: @trashcodermaker/pi-pr-review-handler
 ├── scripts/
 │   └── sync-skill.mjs          # 发布前把 skill 复制到各包
@@ -175,7 +175,7 @@ pr-review-handler/
 
 发布由 tag 驱动（也可用 `workflow_dispatch`）：
 
-- `core-v1.0.0` → 发布 `packages/core`
+- `core-v1.0.1` → 发布 `packages/core`
 - `pi-v1.1.0` → 发布 `packages/pi`
 
 本地发布：
@@ -213,7 +213,7 @@ npm run publish:core    # 或 npm run publish:pi
 
 | 平台 | 支持情况 |
 | --- | --- |
-| npm / Node.js | ✅ 安装 `pr-review-handler` 已发布包 |
+| npm / Node.js | ✅ 安装 `@trashcodermaker/pr-review-handler` 已发布包 |
 | Pi | ✅ 通过 `pi install` 安装 `@trashcodermaker/pi-pr-review-handler` |
 | Claude Code | ✅ Task 机制分发，或 `npx skills add` |
 | Cursor | ✅ background agent 分发 |
