@@ -41,7 +41,7 @@ Agent specs live in `agents/` relative to this skill (`agents/triage-agent.md`, 
 
 | Platform | Dispatch mechanism |
 |----------|-------------------|
-| Pi | `subagent` tool (fresh context per thread) |
+| Pi | inline fallback (Pi has no native subagent mechanism). Recommend installing the [`pi-subagents`](https://github.com/nicobailon/pi-subagents) extension (`pi install npm:pi-subagents`) to gain a `subagent` tool with fresh-context dispatch per thread. |
 | Claude Code | Task tool |
 | Cursor | background agent |
 | Gemini CLI / OpenCode / others | native subtask mechanism if available |
