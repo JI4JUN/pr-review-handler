@@ -230,7 +230,7 @@ into an agent-friendly pipeline.
 | Platform | Support |
 | --- | --- |
 | npm / Node.js | ✅ Install `@trashcodermaker/pr-review-handler` as a published package |
-| Pi | ✅ Install `@trashcodermaker/pi-pr-review-handler` via `pi install` |
+| Pi | ✅ Install `@trashcodermaker/pi-pr-review-handler` via `pi install`. For subtask-based dispatch (fresh context per thread), install the [`pi-subagents`](https://github.com/nicobailon/pi-subagents) extension (`pi install npm:pi-subagents`); otherwise the skill runs inline. |
 | Claude Code | ✅ Task-based agent dispatch, or `npx skills add` |
 | Cursor | ✅ Background agent dispatch |
 | Gemini CLI / OpenCode / others | ✅ Native subtask mechanism, or inline fallback |

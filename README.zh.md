@@ -214,7 +214,7 @@ npm run publish:core    # 或 npm run publish:pi
 | 平台 | 支持情况 |
 | --- | --- |
 | npm / Node.js | ✅ 安装 `@trashcodermaker/pr-review-handler` 已发布包 |
-| Pi | ✅ 通过 `pi install` 安装 `@trashcodermaker/pi-pr-review-handler` |
+| Pi | ✅ 通过 `pi install` 安装 `@trashcodermaker/pi-pr-review-handler`。如需子任务分发（每个线程独立上下文），安装 [`pi-subagents`](https://github.com/nicobailon/pi-subagents) 扩展（`pi install npm:pi-subagents`）；否则 skill 内联运行。 |
 | Claude Code | ✅ Task 机制分发，或 `npx skills add` |
 | Cursor | ✅ background agent 分发 |
 | Gemini CLI / OpenCode / 其他 | ✅ 原生子任务机制，或内联回退 |
