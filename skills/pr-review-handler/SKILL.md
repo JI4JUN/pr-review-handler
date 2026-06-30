@@ -37,17 +37,19 @@ Checkpoints: after Phase 1 (user confirms verdicts) and after Phase 3 (user appr
 
 ### Platform mapping
 
-Each role maps to a different agent depending on the platform. Agent specs for reference are in `agents/` relative to this skill.
+Agent specs live in `agents/` relative to this skill (`agents/triage-agent.md`, `agents/implementation-agent.md`). Every platform uses the same specs — what differs is the dispatch mechanism.
 
-| Role | Pi | Claude Code | Cursor | No-agent fallback |
-|------|-----|-------------|--------|-------------------|
-| Triage | `pr-review.triage` | Task tool | background agent | inline (read spec, execute yourself) |
-| Implementation | `pr-review.implementation` | Task tool | background agent | inline (read spec, execute yourself) |
-| Reply | inline (orchestrator) | inline | inline | inline |
+| Platform | Dispatch mechanism |
+|----------|-------------------|
+| Pi | `subagent` tool (fresh context per thread) |
+| Claude Code | Task tool |
+| Cursor | background agent |
+| Gemini CLI / OpenCode / others | native subtask mechanism if available |
+| No subtask available | inline (read the spec, execute the steps yourself) |
 
-**Pi users**: runtime agents are registered in `.agents/agents/pr-review/` at the project root. They include full system prompts, tool constraints, and output format — dispatch with task prompt containing only the input data (thread info, verdict data).
+**Dispatch pattern**: read the relevant agent spec, embed its instructions into the task prompt along with the thread-specific input data (thread info for triage, verdict data for implementation), and launch one subtask per thread. Triage is read-only so subtasks run in parallel; implementation writes files so it runs serially.
 
-**Other platforms**: read the agent specs in `agents/` relative to this skill (`agents/triage-agent.md`, `agents/implementation-agent.md`), embed the instructions into the task prompt, and dispatch using your available subtask mechanism. If no subtask mechanism exists, execute inline.
+**Inline fallback**: if your platform has no subtask mechanism, you (the orchestrator) read each spec and perform its steps yourself, one thread at a time. The specs are written as direct instructions, so inline execution is straightforward.
 
 ## Phase 0: Setup
 
@@ -142,9 +144,7 @@ comments:
   - <reply 2, if any>
 ```
 
-The agent already has its role instructions and output format built in. Do not embed role instructions in the task prompt — only pass the thread-specific data above.
-
-Collect structured verdicts from all agents.
+Embed the Triage Agent spec (`agents/triage-agent.md`) into the task prompt so the subtask has the full role instructions and output format, then append the thread-specific data above. Collect structured verdicts from all agents.
 
 ### Checkpoint 1: User confirmation
 
@@ -189,7 +189,7 @@ suggested_fix: <what to change>
 prior_changes: <list of previous fixes in this PR, if any>
 ```
 
-The agent already has its role instructions and output format built in. Pass only the verdict data above.
+Embed the Implementation Agent spec (`agents/implementation-agent.md`) into the task prompt so the subtask has the full role instructions, then append the verdict data above.
 
 After each agent completes:
 

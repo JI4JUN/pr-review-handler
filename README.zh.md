@@ -4,13 +4,14 @@
 
 📦 **仓库地址**: <https://github.com/JI4JUN/pr-review-handler>
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/JI4JUN/pr-review-handler/ci.yml?style=flat-square&label=Build)](https://github.com/JI4JUN/pr-review-handler/actions)
-[![npm version](https://img.shields.io/npm/v/@trashcodermaker/pi-pr-review-handler?style=flat-square)](https://www.npmjs.com/package/@trashcodermaker/pi-pr-review-handler)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/JI4JUN/pr-review-handler/publish.yml?style=flat-square&label=Build)](https://github.com/JI4JUN/pr-review-handler/actions)
+[![npm version](https://img.shields.io/npm/v/pr-review-handler?style=flat-square&label=pr-review-handler)](https://www.npmjs.com/package/pr-review-handler)
+[![npm version](https://img.shields.io/npm/v/@trashcodermaker/pi-pr-review-handler?style=flat-square&label=%40trashcodermaker%2Fpi-pr-review-handler)](https://www.npmjs.com/package/@trashcodermaker/pi-pr-review-handler)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
 ⭐ 如果这个项目对你有帮助，欢迎在 [GitHub](https://github.com/JI4JUN/pr-review-handler) 上点个 star！
 
-[项目简介](#项目简介) • [快速开始](#快速开始) • [工作原理](#工作原理) • [使用方法](#使用方法) • [环境要求](#环境要求) • [支持的平台](#支持的平台)
+[项目简介](#项目简介) • [包](#包) • [快速开始](#快速开始) • [工作原理](#工作原理) • [仓库结构](#仓库结构) • [环境要求](#环境要求) • [支持的平台](#支持的平台)
 
 [English version](./README.md)
 
@@ -20,27 +21,42 @@ Code Review 是健康 PR 流程的一部分，但把 review 评论转化为实�
 
 **PR Review Handler** 用自动化流程解决这个问题。它会抓取 GitHub PR 中未关闭的 review 线程，逐条判断评论是否成立，对有效问题做最小化代码修复，生成与评论者语言、语气一致的回复，并在确认后推送变更、请求 re-review。
 
-它可以作为 npm 包、Pi 包、Pi skill，或嵌入到其他 agent 环境使用。项目在 `agents/` 中提供 agent 规格，因此不同平台可以用自己的任务/调度机制运行同一套流水线。
+本 skill 与具体 agent 无关：在 `agents/` 中提供 agent 规格，可运行于任何支持子任务的 agent 框架（Pi、Claude Code、Cursor、Gemini CLI、OpenCode 等），也可在内联模式下回退执行。
+
+## 包
+
+本仓库是 monorepo，从单一真实来源（`skills/pr-review-handler/`）发布两个 npm
+包。两者 skill 内容完全一致，仅在名称和关键字上不同，便于各自的用户群体找到合适的包。
+
+| 包 | npm 名称 | 安装命令 | 适用人群 |
+| --- | --- | --- | --- |
+| Core | `pr-review-handler` | `npm install pr-review-handler` | 任意 agent 框架 |
+| Pi | `@trashcodermaker/pi-pr-review-handler` | `pi install npm:@trashcodermaker/pi-pr-review-handler` | Pi 用户 |
+
+除非你通过 Pi 安装 skill，否则请使用 **Core** 包。**Pi** 包的存在是为了让 Pi
+用户能通过 `pi install` 和 Pi 包画廊（`pi-package` 关键字）发现并安装。
 
 ## 快速开始
 
-### 作为 npm 包安装
+### 作为 npm 包安装（任意 agent）
 
 ```bash
-npm install @trashcodermaker/pi-pr-review-handler
+npm install pr-review-handler
 ```
 
 ### 作为 Pi 包安装
 
 ```bash
-pi install @trashcodermaker/pi-pr-review-handler
+pi install npm:@trashcodermaker/pi-pr-review-handler
 ```
 
-### 通过 skill.sh 安装
+### 通过 skills CLI 安装（任意 agent 框架）
 
 ```bash
 npx skills add JI4JUN/pr-review-handler
 ```
+
+该命令会克隆仓库并把 skill（含 `agents/` 规格）复制到你的 agent skills 目录。
 
 ### 从源码安装
 
@@ -51,11 +67,12 @@ npm install
 ```
 
 > [!IMPORTANT]
-> 使用本 skill 或包之前，请确保已安装并登录 GitHub CLI（`gh`）。读取 PR 数据、发布回复等核心操作都依赖它。
+> 使用本 skill 之前，请确保已安装并登录 GitHub CLI（`gh`）。读取 PR 数据、发布回复等核心操作都依赖它。
 
 ## 工作原理
 
-整个流程由多个阶段组成，每个阶段职责清晰；在需要人工确认的位置会设置 checkpoint 暂停执行。
+整个流程由多个阶段组成，每个阶段职责清晰；在需要人工确认的位置会设置
+checkpoint 暂停执行。
 
 ```
 Phase 0: Setup
@@ -68,7 +85,8 @@ Phase 5: Report
 
 ### Phase 0: Setup
 
-根据当前分支或显式 PR 链接定位目标 PR，抓取未关闭的 review 线程，并补充抓取 review 级别的整体反馈。本阶段只做数据准备，不修改代码。
+根据当前分支或显式 PR 链接定位目标 PR，抓取未关闭的 review 线程，并补充抓取
+review 级别的整体反馈。本阶段只做数据准备，不修改代码。
 
 ### Phase 1: Triage
 
@@ -81,11 +99,14 @@ Phase 5: Report
 如果线程很多且平台支持并行 agent，Triage 会并行执行以提高速度。
 
 > [!TIP]
-> Triage 默认偏保守。如果某条评论含义不清，可直接标记为 `invalid`，原因写 `unclear — needs human review`。
+> Triage 默认偏保守。如果某条评论含义不清，可直接标记为 `invalid`，原因写
+> `unclear — needs human review`。
 
 ### Phase 2: Fix
 
-对每条 `valid-fix` 线程，由专门的 implementation agent 施加满足 review 要求的最小改动。修改前先追踪引用关系；如果改动影响函数签名、类型或导出，会同步更新调用方和测试；不顺手做无关的重构或清理。
+对每条 `valid-fix` 线程，由专门的 implementation agent 施加满足 review 要求的
+最小改动。修改前先追踪引用关系；如果改动影响函数签名、类型或导出，会同步更新
+调用方和测试；不顺手做无关的重构或清理。
 
 本阶段所有修复都会提交到本地，但 **不会推送**。
 
@@ -95,7 +116,8 @@ Phase 5: Report
 npx tsc --noEmit
 ```
 
-如果类型检查失败，流程会自动定位引入错误的提交，回滚、修复后重新提交，再继续后续阶段。
+如果类型检查失败，流程会自动定位引入错误的提交，回滚、修复后重新提交，再继续
+后续阶段。
 
 ### Phase 3: Reply
 
@@ -128,6 +150,40 @@ npx tsc --noEmit
 ✅ Replies: P/P 条回复已起草并发布
 ```
 
+## 仓库结构
+
+```
+pr-review-handler/
+├── skills/
+│   └── pr-review-handler/      # 规范 skill（单一真实来源）
+│       ├── SKILL.md
+│       └── agents/             # triage + implementation agent 规格
+├── packages/
+│   ├── core/                   # → npm: pr-review-handler
+│   └── pi/                     # → npm: @trashcodermaker/pi-pr-review-handler
+├── scripts/
+│   └── sync-skill.mjs          # 发布前把 skill 复制到各包
+├── package.json                # workspaces 根
+└── .github/workflows/publish.yml
+```
+
+两个包都从 `packages/<name>/` 发布。`prepublishOnly` 脚本会运行
+`sync-skill.mjs`，在 npm 打包前把 `skills/pr-review-handler/` 复制进包目录，
+因此 skill 内容在源码中不会重复维护。
+
+### 发布
+
+发布由 tag 驱动（也可用 `workflow_dispatch`）：
+
+- `core-v1.0.0` → 发布 `packages/core`
+- `pi-v1.1.0` → 发布 `packages/pi`
+
+本地发布：
+
+```bash
+npm run publish:core    # 或 npm run publish:pi
+```
+
 ## 使用方法
 
 ### 在 agent 中调用
@@ -144,7 +200,8 @@ npx tsc --noEmit
 
 ### 命令行手动驱动
 
-如果你希望手动控制流程，也可以直接基于 GitHub CLI 命令执行。本 skill 和包的主要价值，是把这些命令封装成 agent 可理解、可执行的结构化流水线。
+如果你希望手动控制流程，也可以直接基于 GitHub CLI 命令执行。本 skill 和包的
+主要价值，是把这些命令封装成 agent 可理解、可执行的结构化流水线。
 
 ## 环境要求
 
@@ -156,11 +213,12 @@ npx tsc --noEmit
 
 | 平台 | 支持情况 |
 | --- | --- |
-| npm / Node.js | ✅ 可作为已发布包安装 |
-| Pi | ✅ 支持作为 package 和 skill 使用 |
-| Claude Code | ✅ 通过 Task 机制分发 agent |
-| Cursor | ✅ 通过 background agent 分发 |
-| 其他 agent 客户端 | ✅ 使用 `agents/` 中的 agent 规格，以内联方式运行 |
+| npm / Node.js | ✅ 安装 `pr-review-handler` 已发布包 |
+| Pi | ✅ 通过 `pi install` 安装 `@trashcodermaker/pi-pr-review-handler` |
+| Claude Code | ✅ Task 机制分发，或 `npx skills add` |
+| Cursor | ✅ background agent 分发 |
+| Gemini CLI / OpenCode / 其他 | ✅ 原生子任务机制，或内联回退 |
+| skills CLI | ✅ `npx skills add JI4JUN/pr-review-handler` |
 
 ## 备注
 

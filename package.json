@@ -1,27 +1,18 @@
 {
-  "name": "@trashcodermaker/pi-pr-review-handler",
-  "version": "1.0.9",
-  "description": "Systematically process GitHub PR review comments: triage for validity, fix code, and post replies.",
-  "type": "module",
+  "name": "pr-review-handler-monorepo",
+  "private": true,
+  "description": "Monorepo for pr-review-handler agent skill. See packages/ for the published npm packages.",
   "license": "MIT",
-  "private": false,
-  "keywords": [
-    "pi-package",
-    "pi-skill",
-    "pr-review",
-    "github",
-    "code-review"
+  "workspaces": [
+    "packages/*"
   ],
-  "publishConfig": {
-    "access": "public"
+  "scripts": {
+    "sync": "node scripts/sync-skill.mjs packages/core && node scripts/sync-skill.mjs packages/pi",
+    "sync:core": "node scripts/sync-skill.mjs packages/core",
+    "sync:pi": "node scripts/sync-skill.mjs packages/pi",
+    "publish:core": "npm publish --workspace packages/core --access public",
+    "publish:pi": "npm publish --workspace packages/pi --access public"
   },
-  "files": [
-    "SKILL.md",
-    "agents",
-    "README.md",
-    "README.zh.md",
-    "LICENSE"
-  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/JI4JUN/pr-review-handler.git"

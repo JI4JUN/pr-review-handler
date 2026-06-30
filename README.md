@@ -4,13 +4,14 @@
 
 📦 **Repository**: <https://github.com/JI4JUN/pr-review-handler>
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/JI4JUN/pr-review-handler/ci.yml?style=flat-square&label=Build)](https://github.com/JI4JUN/pr-review-handler/actions)
-[![npm version](https://img.shields.io/npm/v/@trashcodermaker/pi-pr-review-handler?style=flat-square)](https://www.npmjs.com/package/@trashcodermaker/pi-pr-review-handler)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/JI4JUN/pr-review-handler/publish.yml?style=flat-square&label=Build)](https://github.com/JI4JUN/pr-review-handler/actions)
+[![npm version](https://img.shields.io/npm/v/pr-review-handler?style=flat-square&label=pr-review-handler)](https://www.npmjs.com/package/pr-review-handler)
+[![npm version](https://img.shields.io/npm/v/@trashcodermaker/pi-pr-review-handler?style=flat-square&label=%40trashcodermaker%2Fpi-pr-review-handler)](https://www.npmjs.com/package/@trashcodermaker/pi-pr-review-handler)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
 ⭐ If you like this project, [star it on GitHub](https://github.com/JI4JUN/pr-review-handler) — it helps a lot!
 
-[Overview](#overview) • [Getting started](#getting-started) • [How it works](#how-it-works) • [Usage](#usage) • [Requirements](#requirements) • [Supported platforms](#supported-platforms)
+[Overview](#overview) • [Packages](#packages) • [Getting started](#getting-started) • [How it works](#how-it-works) • [Repository structure](#repository-structure) • [Requirements](#requirements) • [Supported platforms](#supported-platforms)
 
 [中文版](./README.zh.md)
 
@@ -20,27 +21,46 @@ Code review is part of every healthy PR workflow, but turning review threads int
 
 **PR Review Handler** automates that workflow. It fetches unresolved GitHub PR review threads, evaluates each comment for validity, applies minimal code fixes, drafts replies that match the reviewer's language and tone, and optionally pushes changes and requests re-review.
 
-It can be used as an npm package, a Pi package, a Pi skill, or embedded into other agent environments. The project ships agent specifications in `agents/` so each platform can run the pipeline with its own task/dispatch mechanism.
+The skill is agent-agnostic: it ships agent specs in `agents/` and works with any agent harness that can run subtasks (Pi, Claude Code, Cursor, Gemini CLI, OpenCode, …) or inline as a fallback.
+
+## Packages
+
+This repository is a monorepo that publishes two npm packages from a single
+source of truth (`skills/pr-review-handler/`). Both ship identical skill
+content; they differ only in name and keywords so each audience can find the
+one meant for it.
+
+| Package | npm name | Install command | Audience |
+| --- | --- | --- | --- |
+| Core | `pr-review-handler` | `npm install pr-review-handler` | Any agent harness |
+| Pi | `@trashcodermaker/pi-pr-review-handler` | `pi install npm:@trashcodermaker/pi-pr-review-handler` | Pi users |
+
+Use the **Core** package unless you install skills through Pi. The **Pi**
+package exists so Pi users can discover and install it via `pi install` and
+the Pi package gallery (`pi-package` keyword).
 
 ## Getting started
 
-### Install as an npm package
+### Install as an npm package (any agent)
 
 ```bash
-npm install @trashcodermaker/pi-pr-review-handler
+npm install pr-review-handler
 ```
 
 ### Install as a Pi package
 
 ```bash
-pi install @trashcodermaker/pi-pr-review-handler
+pi install npm:@trashcodermaker/pi-pr-review-handler
 ```
 
-### Install from skill.sh
+### Install via skills CLI (any agent harness)
 
 ```bash
 npx skills add JI4JUN/pr-review-handler
 ```
+
+This clones the repo and copies the skill into your agent's skills directory,
+including the `agents/` specs.
 
 ### From source
 
@@ -51,11 +71,14 @@ npm install
 ```
 
 > [!IMPORTANT]
-> Ensure GitHub CLI (`gh`) is installed and authenticated before using this skill or package. Most commands depend on it to read PR data and post replies.
+> Ensure GitHub CLI (`gh`) is installed and authenticated before using this
+> skill. Most commands depend on it to read PR data and post replies.
 
 ## How it works
 
-The handler runs a multi-phase pipeline. Each phase has a clear responsibility, and the flow stops at checkpoints where human confirmation is requested.
+The handler runs a multi-phase pipeline. Each phase has a clear
+responsibility, and the flow stops at checkpoints where human confirmation is
+requested.
 
 ```
 Phase 0: Setup
@@ -68,24 +91,33 @@ Phase 5: Report
 
 ### Phase 0: Setup
 
-Identifies the target PR from the current branch or an explicit PR link, fetches unresolved review threads, and fetches review-level feedback. This phase prepares everything needed for triage without modifying code.
+Identifies the target PR from the current branch or an explicit PR link,
+fetches unresolved review threads, and fetches review-level feedback. This
+phase prepares everything needed for triage without modifying code.
 
 ### Phase 1: Triage
 
-Reads the referenced code and each review thread, then classifies every comment as:
+Reads the referenced code and each review thread, then classifies every
+comment as:
 
 - `valid-fix` — a real issue that requires code changes
 - `valid-nofix` — the concern is valid, but no code change is needed
-- `invalid` — the premise doesn't apply to current code, or the suggested fix would be harmful
+- `invalid` — the premise doesn't apply to current code, or the suggested fix
+  would be harmful
 
-If there are many threads and the platform supports parallel agents, triage runs in parallel for speed.
+If there are many threads and the platform supports parallel agents, triage
+runs in parallel for speed.
 
 > [!TIP]
-> Triage is intentionally conservative. If a comment is unclear, mark it `invalid` with the reason `unclear — needs human review`.
+> Triage is intentionally conservative. If a comment is unclear, mark it
+> `invalid` with the reason `unclear — needs human review`.
 
 ### Phase 2: Fix
 
-For each `valid-fix` thread, a specialized implementation agent applies the smallest possible change that satisfies the review. The agent traces references first, updates callers and tests when signatures change, and avoids unrelated cleanup or refactors.
+For each `valid-fix` thread, a specialized implementation agent applies the
+smallest possible change that satisfies the review. The agent traces
+references first, updates callers and tests when signatures change, and
+avoids unrelated cleanup or refactors.
 
 All fixes are committed locally, but **never pushed** during this phase.
 
@@ -95,7 +127,8 @@ After all fixes:
 npx tsc --noEmit
 ```
 
-If type checking fails, the pipeline identifies the offending commit, reverts it, fixes the issue, and recommits before continuing.
+If type checking fails, the pipeline identifies the offending commit,
+reverts it, fixes the issue, and recommits before continuing.
 
 ### Phase 3: Reply
 
@@ -106,11 +139,13 @@ The orchestrator drafts one reply per thread based on:
 - Actual diff: `git diff origin/{branch}...HEAD`
 - Failure records from Phase 2
 
-Replies are matched to the reviewer's language and tone, kept concise, and never defensive.
+Replies are matched to the reviewer's language and tone, kept concise, and
+never defensive.
 
 ### Phase 4: Post & Push
 
-Approved replies are posted to GitHub, and all local review-fix commits are pushed in one step.
+Approved replies are posted to GitHub, and all local review-fix commits are
+pushed in one step.
 
 Optionally, the handler can also:
 
@@ -128,11 +163,47 @@ A concise summary is printed at the end:
 ✅ Replies: P/P threads drafted and posted
 ```
 
+## Repository structure
+
+```
+pr-review-handler/
+├── skills/
+│   └── pr-review-handler/      # canonical skill (single source of truth)
+│       ├── SKILL.md
+│       └── agents/             # triage + implementation agent specs
+├── packages/
+│   ├── core/                   # → npm: pr-review-handler
+│   └── pi/                     # → npm: @trashcodermaker/pi-pr-review-handler
+├── scripts/
+│   └── sync-skill.mjs          # copies the skill into each package at publish
+├── package.json                # workspaces root
+└── .github/workflows/publish.yml
+```
+
+Both packages publish from `packages/<name>/`. The `prepublishOnly` script
+runs `sync-skill.mjs` to copy `skills/pr-review-handler/` into the package
+before npm packs it, so the skill content is never duplicated in source
+control.
+
+### Publishing
+
+Publishing is driven by tags (or `workflow_dispatch`):
+
+- `core-v1.0.0` → publishes `packages/core`
+- `pi-v1.1.0` → publishes `packages/pi`
+
+Locally:
+
+```bash
+npm run publish:core    # or npm run publish:pi
+```
+
 ## Usage
 
 ### In an agent
 
-When installed as a skill, invoke it from your agent with natural language. Examples:
+When installed as a skill, invoke it from your agent with natural language.
+Examples:
 
 - "帮我处理这个 PR 的 review：<https://github.com/owner/repo/pull/123>"
 - "回复 reviewer 的评论"
@@ -144,7 +215,9 @@ When installed as a skill, invoke it from your agent with natural language. Exam
 
 ### From the command line
 
-If you want to drive the workflow manually, you can use the GitHub CLI commands directly. The skill and package primarily wrap these operations into an agent-friendly pipeline.
+If you want to drive the workflow manually, you can use the GitHub CLI
+commands directly. The skill and package primarily wrap these operations
+into an agent-friendly pipeline.
 
 ## Requirements
 
@@ -156,16 +229,20 @@ If you want to drive the workflow manually, you can use the GitHub CLI commands 
 
 | Platform | Support |
 | --- | --- |
-| npm / Node.js | ✅ Install as a published package |
-| Pi | ✅ Supported as a package and as a skill |
-| Claude Code | ✅ Task-based agent dispatch |
+| npm / Node.js | ✅ Install `pr-review-handler` as a published package |
+| Pi | ✅ Install `@trashcodermaker/pi-pr-review-handler` via `pi install` |
+| Claude Code | ✅ Task-based agent dispatch, or `npx skills add` |
 | Cursor | ✅ Background agent dispatch |
-| Other agent clients | ✅ Inline fallback using the agent specs in `agents/` |
+| Gemini CLI / OpenCode / others | ✅ Native subtask mechanism, or inline fallback |
+| skills CLI | ✅ `npx skills add JI4JUN/pr-review-handler` |
 
 ## Notes
 
 - Agent specs are provided in `agents/` for reuse across platforms.
-- When a platform supports parallel agents, triage can run in parallel; otherwise it runs inline.
-- There are two checkpoints where execution pauses for confirmation: after triage verdicts, and before posting replies.
+- When a platform supports parallel agents, triage can run in parallel;
+  otherwise it runs inline.
+- There are two checkpoints where execution pauses for confirmation: after
+  triage verdicts, and before posting replies.
 - Pushes only happen once, after replies are approved.
-- The implementation phase is serial by default to avoid conflicting file changes.
+- The implementation phase is serial by default to avoid conflicting file
+  changes.

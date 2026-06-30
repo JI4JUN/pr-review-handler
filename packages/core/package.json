@@ -1,0 +1,36 @@
+{
+  "name": "pr-review-handler",
+  "version": "1.0.0",
+  "description": "Systematically process GitHub PR review comments: triage for validity, fix code, and post replies. Agent skill usable from any agent harness (Pi, Claude Code, Cursor, Gemini CLI, OpenCode, etc.).",
+  "type": "module",
+  "license": "MIT",
+  "private": false,
+  "keywords": [
+    "pr-review",
+    "github",
+    "code-review",
+    "skill",
+    "agent-skill",
+    "agentskills"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "skills",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "prepublishOnly": "node ../../scripts/sync-skill.mjs ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JI4JUN/pr-review-handler.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/JI4JUN/pr-review-handler#readme",
+  "bugs": {
+    "url": "https://github.com/JI4JUN/pr-review-handler/issues"
+  }
+}

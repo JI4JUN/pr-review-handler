@@ -3,8 +3,14 @@ name: Publish
 on:
   push:
     tags:
-      - "v*"
+      - "core-v*"
+      - "pi-v*"
   workflow_dispatch:
+    inputs:
+      package:
+        description: "Package to publish (core | pi | both)"
+        required: true
+        default: "both"
 
 permissions:
   contents: write
@@ -20,8 +26,40 @@ jobs:
           node-version: "lts/*"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Publish to npm
-        run: npm publish --access public
+      - name: Resolve target package
+        id: target
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            tag="${GITHUB_REF#refs/tags/}"
+            case "$tag" in
+              core-v*) pkgs=core ;;
+              pi-v*)   pkgs=pi   ;;
+              *)       pkgs=both ;;
+            esac
+          else
+            pkgs="${{ inputs.package }}"
+          fi
+          echo "pkgs=$pkgs" >> "$GITHUB_OUTPUT"
+          if [[ "$pkgs" == core || "$pkgs" == both ]]; then
+            echo "core=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "core=false" >> "$GITHUB_OUTPUT"
+          fi
+          if [[ "$pkgs" == pi || "$pkgs" == both ]]; then
+            echo "pi=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "pi=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish core
+        if: steps.target.outputs.core == 'true'
+        run: npm publish --workspace packages/core --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish pi
+        if: steps.target.outputs.pi == 'true'
+        run: npm publish --workspace packages/pi --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
