@@ -49,7 +49,7 @@ Agent specs live in `agents/` relative to this skill (`agents/triage-agent.md`, 
 
 **Dispatch pattern**: read the relevant agent spec, embed its instructions into the task prompt along with the thread-specific input data (thread info for triage, verdict data for implementation), and launch one subtask per thread. Triage is read-only so subtasks run in parallel; implementation writes files so it runs serially.
 
-**Pi dispatch capability**: Pi does not bundle a subtask mechanism — it depends on the optional `pi-subagents` package (recommended in the project README). Check at runtime whether the `subagent` tool is present in your tool list: if present, use it (PARALLEL mode for triage, SINGLE mode serially for implementation); if absent, fall back to inline execution. Do not assume pi-subagents is installed, and do not error if it is missing — the skill degrades gracefully either way.
+**Pi dispatch capability**: Pi does not bundle a subtask mechanism — it depends on the optional `pi-subagents` package (recommended in the project README). To detect it, look in your available tools list for a tool **literally named `subagent`** (the exact tool name, not a description match). If you see a tool named `subagent`, it is available — use it (PARALLEL mode for triage, SINGLE mode serially for implementation). If no tool named `subagent` appears in your tool list, fall back to inline execution. Do not assume pi-subagents is installed, and do not error if it is missing — the skill degrades gracefully either way.
 
 **Inline fallback**: if the `subagent` tool is not available (e.g. pi-subagents not installed) or the platform has no subtask mechanism, you (the orchestrator) read each spec and perform its steps yourself, one thread at a time. The specs are written as direct instructions, so inline execution is straightforward.
 
@@ -97,6 +97,8 @@ gh api graphql -f query='
 ```
 
 Filter `isResolved: false`. Include full thread (not just top-level) — follow-up replies often contain the real concern.
+
+**Deduplicate threads before triage.** Automated reviewers (React Doctor, claude[bot], etc.) often post the same concern multiple times across different reviews, and human reviewers may re-comment after a push. Before dispatching Triage Agents, cluster threads by `(path, line)` and collapse those whose top-level comment bodies share the same core concern (match on the first sentence or the rule identifier like `react-doctor/prefer-useReducer`). Keep one representative thread per cluster, but record all `databaseId`s — Phase 4 posts the reply to **every** original thread in the cluster so no reviewer comment is left unanswered. Report the dedup result to the user (e.g. "8 threads → 3 unique concerns") so the Checkpoint 1 table stays readable.
 
 **Fallback: REST** (when GraphQL unavailable):
 
@@ -342,14 +344,14 @@ Present all reply drafts. User can:
 
 ## Phase 4: Post & Push
 
-Post approved replies:
+Post approved replies. The reply endpoint requires `-X POST` and the PR number in the path:
 
 ```bash
-gh api repos/{owner}/{repo}/pulls/comments/{comment_id}/replies \
+gh api -X POST repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies \
   -f body='The response text'
 ```
 
-Reply to the top-level comment of each thread (the one with `databaseId`, not a reply).
+Reply to the top-level comment of each thread (the one with `databaseId`, not a reply). The `{pr_number}` is the PR number (e.g. `561`), and `{comment_id}` is the `databaseId` from Phase 0. Note: the path is `pulls/{pr_number}/comments/...`, **not** `pulls/comments/...` — the latter returns 404.
 
 Push all commits:
 
