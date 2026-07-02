@@ -7,9 +7,9 @@
     "packages/*"
   ],
   "scripts": {
-    "sync": "node scripts/sync-skill.mjs packages/core && node scripts/sync-skill.mjs packages/pi",
+    "sync": "node scripts/sync-skill.mjs packages/core && node scripts/sync-skill.mjs packages/pi --name pi-pr-review-handler",
     "sync:core": "node scripts/sync-skill.mjs packages/core",
-    "sync:pi": "node scripts/sync-skill.mjs packages/pi",
+    "sync:pi": "node scripts/sync-skill.mjs packages/pi --name pi-pr-review-handler",
     "publish:core": "npm publish --workspace packages/core --access public",
     "publish:pi": "npm publish --workspace packages/pi --access public"
   },

@@ -1,6 +1,7 @@
 .DS_Store
 .npmrc
 node_modules
+package-lock.json
 
 # Synced skill copies — generated from skills/pr-review-handler/ by sync-skill.mjs
 packages/*/skills/

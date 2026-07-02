@@ -26,15 +26,20 @@ Code Review 是健康 PR 流程的一部分，但把 review 评论转化为实�
 ## 包
 
 本仓库是 monorepo，从单一真实来源（`skills/pr-review-handler/`）发布两个 npm
-包。两者 skill 内容完全一致，仅在名称和关键字上不同，便于各自的用户群体找到合适的包。
+包。两者 skill 内容完全一致，仅在发布的 skill 名称和 npm 关键字上不同，便于各自的用户群体找到合适的包。
 
-| 包 | npm 名称 | 安装命令 | 适用人群 |
-| --- | --- | --- | --- |
-| Core | `@trashcodermaker/pr-review-handler` | `npm install @trashcodermaker/pr-review-handler` | 任意 agent 框架 |
-| Pi | `@trashcodermaker/pi-pr-review-handler` | `pi install npm:@trashcodermaker/pi-pr-review-handler` | Pi 用户 |
+| 包 | npm 名称 | Skill 名称 | 安装命令 | 适用人群 |
+| --- | --- | --- | --- | --- |
+| Core | `@trashcodermaker/pr-review-handler` | `pr-review-handler` | `npm install @trashcodermaker/pr-review-handler` | 任意 agent 框架 |
+| Pi | `@trashcodermaker/pi-pr-review-handler` | `pi-pr-review-handler` | `pi install npm:@trashcodermaker/pi-pr-review-handler` | Pi 用户 |
 
 除非你通过 Pi 安装 skill，否则请使用 **Core** 包。**Pi** 包的存在是为了让 Pi
 用户能通过 `pi install` 和 Pi 包画廊（`pi-package` 关键字）发现并安装。
+
+> [!NOTE]
+> Pi 包以 **`pi-pr-review-handler`** 作为 skill 名称发布（而非
+> `pr-review-handler`），这样在同一项目里同时存在 `skills.sh` / `npx skills add`
+> 安装的 Core skill 时不会发生名称冲突。调用方式为 `/skill:pi-pr-review-handler`。
 
 ## 快速开始
 
@@ -49,6 +54,27 @@ npm install @trashcodermaker/pr-review-handler
 ```bash
 pi install npm:@trashcodermaker/pi-pr-review-handler
 ```
+
+该 skill 注册为 **`pi-pr-review-handler`**（调用方式
+`/skill:pi-pr-review-handler`）。这与 Core / `skills.sh` 的 skill 名称
+（`pr-review-handler`）不同，两者可在同一环境中并存，不会发生 Pi skill
+名称冲突。
+
+> [!IMPORTANT]
+> **从 ≤ 1.1.3 升级？** 旧版本在本包内以 `pr-review-handler/` 目录发布 skill。
+> npm 不一定会删除旧版本中存在但新版本中已不存在的文件，因此升级后可能残留
+> `skills/pr-review-handler/` 目录，从而再次引发名称冲突。升级后若存在该目录，请手动删除：
+>
+> ```bash
+> rm -rf ~/.pi/agent/npm/node_modules/@trashcodermaker/pi-pr-review-handler/skills/pr-review-handler
+> ```
+>
+> 或直接卸载后重装：
+>
+> ```bash
+> pi uninstall @trashcodermaker/pi-pr-review-handler
+> pi install npm:@trashcodermaker/pi-pr-review-handler
+> ```
 
 ### 通过 skills CLI 安装（任意 agent 框架）
 

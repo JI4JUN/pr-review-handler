@@ -27,17 +27,23 @@ The skill is agent-agnostic: it ships agent specs in `agents/` and works with an
 
 This repository is a monorepo that publishes two npm packages from a single
 source of truth (`skills/pr-review-handler/`). Both ship identical skill
-content; they differ only in name and keywords so each audience can find the
-one meant for it.
+content; they differ only in the published skill name and npm keywords so
+each audience can find the one meant for it.
 
-| Package | npm name | Install command | Audience |
-| --- | --- | --- | --- |
-| Core | `@trashcodermaker/pr-review-handler` | `npm install @trashcodermaker/pr-review-handler` | Any agent harness |
-| Pi | `@trashcodermaker/pi-pr-review-handler` | `pi install npm:@trashcodermaker/pi-pr-review-handler` | Pi users |
+| Package | npm name | Skill name | Install command | Audience |
+| --- | --- | --- | --- | --- |
+| Core | `@trashcodermaker/pr-review-handler` | `pr-review-handler` | `npm install @trashcodermaker/pr-review-handler` | Any agent harness |
+| Pi | `@trashcodermaker/pi-pr-review-handler` | `pi-pr-review-handler` | `pi install npm:@trashcodermaker/pi-pr-review-handler` | Pi users |
 
 Use the **Core** package unless you install skills through Pi. The **Pi**
 package exists so Pi users can discover and install it via `pi install` and
 the Pi package gallery (`pi-package` keyword).
+
+> [!NOTE]
+> The Pi package ships its skill as **`pi-pr-review-handler`** (not
+> `pr-review-handler`) so it can coexist with a `skills.sh` / `npx skills add`
+> install of the Core skill in the same project without a name collision.
+> Invoke it as `/skill:pi-pr-review-handler`.
 
 ## Getting started
 
@@ -52,6 +58,30 @@ npm install @trashcodermaker/pr-review-handler
 ```bash
 pi install npm:@trashcodermaker/pi-pr-review-handler
 ```
+
+The skill registers as **`pi-pr-review-handler`** (invoke with
+`/skill:pi-pr-review-handler`). This differs from the Core / `skills.sh`
+skill name (`pr-review-handler`) so the two can be installed side-by-side
+in the same environment without a Pi skill-name collision.
+
+> [!IMPORTANT]
+> **Upgrading from ≤ 1.1.3?** Older versions shipped the skill as
+> `pr-review-handler/` inside this package. npm does not always remove
+> files that existed in a previous version but are absent from the new
+> tarball, so a stale `skills/pr-review-handler/` directory may survive an
+> upgrade and re-introduce the name collision. After upgrading, remove it
+> manually if present:
+>
+> ```bash
+> rm -rf ~/.pi/agent/npm/node_modules/@trashcodermaker/pi-pr-review-handler/skills/pr-review-handler
+> ```
+>
+> Or simply uninstall and reinstall:
+>
+> ```bash
+> pi uninstall @trashcodermaker/pi-pr-review-handler
+> pi install npm:@trashcodermaker/pi-pr-review-handler
+> ```
 
 ### Install via skills CLI (any agent harness)
 

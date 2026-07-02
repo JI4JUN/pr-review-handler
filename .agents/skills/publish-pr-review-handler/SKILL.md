@@ -1,6 +1,6 @@
 ---
 name: publish-pr-review-handler
-description: Publish a new version of the pr-review-handler monorepo packages. Use whenever the skill content in skills/pr-review-handler/ has changed and needs to be released to npm, or when releasing a new version of either @trashcodermaker/pr-review-handler (core) or @trashcodermaker/pi-pr-review-handler (pi). Triggers: "发版", "发布新版本", "publish packages", "release a new version", "bump and publish", "打 tag 发布", or any mention of cutting a release for this repo's npm packages.
+description: 'Publish a new version of the pr-review-handler monorepo packages. Use whenever the skill content in skills/pr-review-handler/ has changed and needs to be released to npm, or when releasing a new version of either @trashcodermaker/pr-review-handler (core) or @trashcodermaker/pi-pr-review-handler (pi). Triggers: "发版", "发布新版本", "publish packages", "release a new version", "bump and publish", "打 tag 发布", or any mention of cutting a release for this repo''s npm packages.'
 ---
 
 # Publish pr-review-handler
