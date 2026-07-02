@@ -41,7 +41,7 @@ Agent specs live in `agents/` relative to this skill (`agents/triage-agent.md`, 
 
 | Platform | Dispatch mechanism |
 |----------|-------------------|
-| Pi | inline fallback (no native subtask mechanism) |
+| Pi | `subagent` tool if [pi-subagents](https://www.npmjs.com/package/pi-subagents) is installed, else inline fallback |
 | Claude Code | Task tool |
 | Cursor | background agent |
 | Gemini CLI / OpenCode / others | native subtask mechanism if available |
@@ -49,7 +49,9 @@ Agent specs live in `agents/` relative to this skill (`agents/triage-agent.md`, 
 
 **Dispatch pattern**: read the relevant agent spec, embed its instructions into the task prompt along with the thread-specific input data (thread info for triage, verdict data for implementation), and launch one subtask per thread. Triage is read-only so subtasks run in parallel; implementation writes files so it runs serially.
 
-**Inline fallback**: if your platform has no subtask mechanism, you (the orchestrator) read each spec and perform its steps yourself, one thread at a time. The specs are written as direct instructions, so inline execution is straightforward.
+**Pi dispatch capability**: Pi does not bundle a subtask mechanism — it depends on the optional `pi-subagents` package (recommended in the project README). Check at runtime whether the `subagent` tool is present in your tool list: if present, use it (PARALLEL mode for triage, SINGLE mode serially for implementation); if absent, fall back to inline execution. Do not assume pi-subagents is installed, and do not error if it is missing — the skill degrades gracefully either way.
+
+**Inline fallback**: if the `subagent` tool is not available (e.g. pi-subagents not installed) or the platform has no subtask mechanism, you (the orchestrator) read each spec and perform its steps yourself, one thread at a time. The specs are written as direct instructions, so inline execution is straightforward.
 
 ## Phase 0: Setup
 
@@ -100,7 +102,7 @@ Filter `isResolved: false`. Include full thread (not just top-level) — follow-
 
 ```bash
 gh api repos/{owner}/{repo}/pulls/{pr_number}/comments \
-  --jq 'group_by(.path, .original_commit_id) | map({
+  --jq 'group_by([.path, (.original_commit_id // "HEAD")]) | map({
     thread_id: .[0].id, path: .[0].path,
     comments: [.[] | {id, body, user: .user.login, line, in_reply_to_id}]
   })'
@@ -117,16 +119,44 @@ gh api repos/{owner}/{repo}/pulls/{pr_number}/reviews \
   --jq 'sort_by(.submitted_at) | reverse | .[:5] | .[] | {id, state, user: .user.login, body}'
 ```
 
-Include any non-empty review bodies alongside the thread data when presenting to the user in Phase 2.
+Present any non-empty review bodies in Checkpoint 1 (Phase 1) as a
+separate **Review-level feedback** section. These are summary comments
+without line references, so they do not go through the Triage Agent
+automatically — the user decides how to handle each one (ignore / reply
+only / needs code change). If the user marks one as needing a code change,
+convert it into an Implementation task with `path: <overall PR>` and no
+specific line; the Implementation Agent then works from the review body
+text and the PR diff.
+
+### Fetch PR diff
+
+Triage needs to see what the PR actually changed — without it, the agent cannot
+distinguish a problem the PR introduced from one that already existed in the
+base branch.
+
+```bash
+gh pr diff {pr_number} > /tmp/pr-{pr_number}.diff
+```
+
+Cache the diff to a temp file. When dispatching each Triage Agent in Phase 1,
+pass only the hunks relevant to that thread's `path` as `pr_diff_context`. If
+the total diff is small (< 500 lines), pass the full diff to every agent for
+broader context.
 
 ## Phase 1: Triage (parallel dispatch)
 
 ### Dispatch strategy
 
-Triage is read-only — safe to parallelize.
+Triage is read-only — safe to parallelize. First detect dispatch capability:
+
+- **Pi with `subagent` tool available** (pi-subagents installed): use PARALLEL mode — spawn one Triage Agent subtask per thread simultaneously. For implementation (Phase 2), use SINGLE mode serially — each fix is a separate subtask, one at a time, because fixes write files.
+- **No `subagent` tool / no subtask mechanism**: run inline, same logic, one thread at a time.
+
+Then choose a strategy based on thread count:
 
 - **≥3 threads + parallel capability**: spawn one Triage Agent per thread simultaneously
 - **≤2 threads or no parallel capability**: run inline, same logic
+- **Large PR (> 15 threads)**: batch by file path to keep context manageable. Group threads sharing the same `path` into the same batch (they share `pr_diff_context`, saving tokens). Dispatch one batch at a time, 8–10 threads per batch. Collect verdicts across batches before presenting Checkpoint 1. This avoids spawning dozens of subagents at once, which can hit API rate limits and produce a verdict table too long for the user to review.
 
 If unsure about parallel capability, default to inline.
 
@@ -142,13 +172,14 @@ comments:
   - <top-level comment text>
   - <reply 1, if any>
   - <reply 2, if any>
+pr_diff_context: <diff hunks for {path} from /tmp/pr-{pr_number}.diff, or full diff if PR is small>
 ```
 
 Embed the Triage Agent spec (`agents/triage-agent.md`) into the task prompt so the subtask has the full role instructions and output format, then append the thread-specific data above. Collect structured verdicts from all agents.
 
 ### Checkpoint 1: User confirmation
 
-Present verdicts as a summary table:
+Present thread verdicts as a summary table:
 
 | # | File:Line | Reviewer | Summary | Verdict | Affected Files |
 |---|-----------|----------|---------|---------|----------------|
@@ -156,7 +187,21 @@ Present verdicts as a summary table:
 | 2 | src/ui/Button.tsx:18 | bob | Rename for clarity | valid-fix | Button.tsx |
 | 3 | src/api/handler.ts:99 | alice | Add rate limiting | invalid | — |
 
-User can adjust verdicts or skip threads. Proceed with confirmed plan.
+Then present the **Review-level feedback** section (summary comments
+without line references, fetched in Phase 0):
+
+| # | Reviewer | State | Body (excerpt) |
+|---|----------|-------|----------------|
+| R1 | alice | CHANGES_REQUESTED | "Overall solid, but the auth module needs a refactor — see thread #1" |
+| R2 | bob | COMMENTED | "Please add tests for the token expiry edge case" |
+
+For each review-level item, ask the user to choose:
+
+- **Ignore** — no action needed (e.g. summary of already-addressed threads)
+- **Reply only** — draft a clarification in Phase 3, no code change
+- **Needs code change** — convert to an Implementation task: `path: <overall PR>`, no line, `summary: <review body>`, `affected_files: <user-specified or all PR files>`, `suggested_fix: <user describes>`. Dispatch in Phase 2.
+
+User can adjust thread verdicts or skip threads. Proceed with confirmed plan.
 
 ### Quick exits
 
@@ -191,6 +236,8 @@ prior_changes: <list of previous fixes in this PR, if any>
 
 Embed the Implementation Agent spec (`agents/implementation-agent.md`) into the task prompt so the subtask has the full role instructions, then append the verdict data above.
 
+**Pi dispatch**: if the `subagent` tool is available, use SINGLE mode — one subtask per fix, awaited in turn (serial). Pass `prior_changes` by collecting each completed subtask's output and appending it to the next subtask's input. If `subagent` is unavailable, execute the Implementation Agent spec inline, one thread at a time.
+
 After each agent completes:
 
 ```bash
@@ -202,15 +249,23 @@ If commit is empty (agent made no changes), skip.
 
 ### After all fixes
 
-```bash
-npx tsc --noEmit
-```
+Run the project's type checker or equivalent verification. Detect the
+project type and run the matching command — do not assume TypeScript:
 
-If tsc fails:
+| Project marker | Command |
+| --- | --- |
+| `tsconfig.json` | `npx tsc --noEmit` |
+| `package.json` (no tsconfig) | `npm run lint --if-present` and `npm test --if-present` |
+| `pyproject.toml` / `setup.py` | `ruff check .` then `mypy .` (if configured) |
+| `go.mod` | `go build ./...` |
+| `Cargo.toml` | `cargo check` |
+| none recognized | skip; tell user to run the project's check manually |
+
+If the check fails:
 
 - Identify which commit introduced the error (`git bisect` or check error file paths)
 - `git revert --no-commit {commit}` → fix the error → recommit
-- Re-run tsc until clean
+- Re-run the check until clean
 
 Also check:
 
@@ -236,11 +291,37 @@ Draft one reply per thread, using `git diff origin/{branch}...HEAD` as ground tr
 
 **valid-fix (succeeded)**: describe what was changed, referencing the reviewer's concern. If the fix differs from what the reviewer suggested, explain why.
 
+Examples:
+
+> Good (EN): "Added the null check at line 42 as you suggested — `user` can indeed be undefined when the session expires."
+>
+> Good (中文): "已在 42 行加了空值判断，session 过期时 `user` 确实可能为 undefined。"
+>
+> Good (EN, diverged from suggestion): "Your point about rate limiting is valid. Instead of a fixed window I used a token bucket in `rateLimit.ts` — it handles burst traffic better and the existing tests cover it."
+
 **valid-fix (failed)**: acknowledge the concern was valid. Explain why the fix couldn't be applied (type conflict, dependency issue). Suggest next steps if possible ("will address in a follow-up PR"). Don't be apologetic — just factual.
+
+Examples:
+
+> Good (EN): "You're right that this should be typed more strictly, but the `User` interface is shared with the legacy auth module which expects `any`. I'll extract a `StrictUser` type in a follow-up PR to avoid breaking that module here."
+>
+> Good (中文): "这里确实该用更严格的类型，但 `User` 接口被旧 auth 模块共用且依赖 `any`。我会在后续 PR 里拆出 `StrictUser` 类型，避免这里改动波及该模块。"
 
 **valid-nofix**: acknowledge the concern is valid. Explain why no code change is needed. Provide clarification if the reviewer misunderstood the code.
 
+Examples:
+
+> Good (EN): "Fair point on the naming — `handleX` is a bit vague. It's part of the public API documented in `docs/api.md`, so renaming would be a breaking change. I'll add a deprecation alias in the next major."
+>
+> Good (中文): "命名确实不够清晰，不过 `handleX` 是 `docs/api.md` 里记录的公开 API，重命名属于破坏性变更，下个大版本会加弃用别名。"
+
 **invalid**: explain clearly why the premise doesn't apply. Reference specific code that already handles the concern. Acknowledge the reviewer's intent ("I see why you'd think X, but..."). Be respectful but direct — don't hedge if the concern is genuinely wrong.
+
+Examples:
+
+> Good (EN): "I see why you'd think the count could overflow here, but `items` is already capped at `MAX_ITEMS` (line 15) before this loop runs, so `i` stays well within `Number.MAX_SAFE_INTEGER`."
+>
+> Good (中文): "能理解你担心这里 count 溢出，但进入循环前 `items` 已在 15 行被 `MAX_ITEMS` 截断，`i` 始终远小于 `Number.MAX_SAFE_INTEGER`。"
 
 ### Reply guidelines
 
@@ -310,7 +391,7 @@ Output final summary:
 | API rate limit | Wait for `X-RateLimit-Reset`, retry |
 | PR closed/merged | Warn user — replies have no effect |
 | GraphQL unsupported | Fall back to REST with resolved-thread caveat |
-| tsc fails after all fixes | Fix before posting replies |
+| Type check fails after all fixes | Fix before posting replies |
 
 ## Key Principles
 

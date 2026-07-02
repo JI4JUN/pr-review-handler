@@ -23,13 +23,16 @@ comments:
   - [top-level comment]
   - [reply 1, if any]
   - [reply 2, if any]
+pr_diff_context: [diff hunks for this file from the PR, or full diff if PR is small]
 ```
 
 ## Steps
 
-### 1. Read the referenced code
+### 1. Read the referenced code and PR diff context
 
 Open `{path}` and examine the code at `{line}` plus surrounding context (±20 lines minimum). Understand what the code does, what it depends on, and what depends on it.
+
+Then read `pr_diff_context` — the diff hunks for this file from the PR. This tells you whether the code the reviewer commented on was introduced by this PR, modified by it, or already existed in the base branch. A concern about code the PR didn't touch is usually out of scope for this review.
 
 ### 2. Read the full thread carefully
 
