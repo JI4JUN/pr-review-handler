@@ -73,7 +73,7 @@ This list drives the Implementation Agent's scope — missing a file here means 
 
 ## Output
 
-Return exactly this structure:
+Output ONLY this YAML block — no prose, no JSON, no other text before or after:
 
 ```yaml
 thread_id: <id>
@@ -90,7 +90,8 @@ suggested_fix: <brief description of what to change, empty if not valid-fix>
 
 ## Constraints
 
-- **Read-only**: do not modify any files
+- **Read-only**: do not modify any files. You have no `edit`/`write`/`bash` tools — you cannot modify files even if asked.
+- **No verification commands**: do not run `tsc`, `npm run build`, `npm test`, or any build/lint command. The orchestrator handles verification after all fixes.
 - **No guesses**: if you cannot determine validity, set verdict to `invalid` with reason `"unclear — needs human review"` and explain what evidence was missing (which file you couldn't read, which API you couldn't verify, etc.). Do not guess valid or invalid without evidence.
 - **Be thorough on affected_files**: this list determines what the Implementation Agent is allowed to touch
 - **One thread at a time**: you are dispatched for a single thread, not batch

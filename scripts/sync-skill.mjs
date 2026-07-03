@@ -138,7 +138,7 @@ description: PR review triage specialist — read-only verdict classifier for re
 systemPromptMode: replace
 inheritProjectContext: true
 inheritSkills: false
-tools: read, grep, find, ls, bash, mcp:codegraph
+tools: read, grep, find, ls, mcp:codegraph
 thinking: high
 defaultContext: fresh
 ---
