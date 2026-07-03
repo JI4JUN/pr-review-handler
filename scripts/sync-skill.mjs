@@ -140,6 +140,7 @@ inheritProjectContext: true
 inheritSkills: false
 tools: read, grep, find, ls, mcp:codegraph
 thinking: high
+completionGuard: false
 defaultContext: fresh
 ---
 
