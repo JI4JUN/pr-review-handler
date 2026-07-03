@@ -118,8 +118,14 @@ const agentsDir = resolve(dest, "agents");
 const projectAgentsDir = resolve(agentsDir, "pr-review-handler");
 await mkdir(projectAgentsDir, { recursive: true });
 
-const triageSpec = await readFile(resolve(agentsDir, "triage-agent.md"), "utf8");
-const implSpec = await readFile(resolve(agentsDir, "implementation-agent.md"), "utf8");
+const triageSpec = await readFile(
+	resolve(agentsDir, "triage-agent.md"),
+	"utf8",
+);
+const implSpec = await readFile(
+	resolve(agentsDir, "implementation-agent.md"),
+	"utf8",
+);
 
 // Strip the leading "# Triage Agent" / "# Implementation Agent" title —
 // project agents go straight to the system prompt body.
@@ -152,7 +158,11 @@ defaultContext: fresh
 ${stripTitle(implSpec)}`;
 
 await writeFile(resolve(projectAgentsDir, "triage.md"), triageAgent, "utf8");
-await writeFile(resolve(projectAgentsDir, "implementation.md"), implAgent, "utf8");
+await writeFile(
+	resolve(projectAgentsDir, "implementation.md"),
+	implAgent,
+	"utf8",
+);
 console.log(`Generated project agent templates → agents/pr-review-handler/`);
 
 console.log(`Synced skill → ${dest} (name: ${skillName})`);

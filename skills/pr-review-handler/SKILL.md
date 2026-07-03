@@ -49,7 +49,7 @@ Agent specs live in `agents/` relative to this skill (`agents/triage-agent.md`, 
 
 **Dispatch pattern**: read the relevant agent spec, embed its instructions into the task prompt along with the thread-specific input data (thread info for triage, verdict data for implementation), and launch one subtask per thread. Triage is read-only so subtasks run in parallel; implementation writes files so it runs serially.
 
-**Pi dispatch**: Pi uses the `subagent` tool (from the optional `pi-subagents` package) with project-level agents registered in `.agents/agents/pr-review-handler/`. Phase 0 auto-creates these from templates shipped in the skill package. Once registered, dispatch with agent name `pr-review-handler.triage` (Phase 1) or `pr-review-handler.implementation` (Phase 2) — the task prompt contains only the input data, since the agent carries its own system prompt. If `pi-subagents` is not installed (no `subagent` tool), fall back to inline execution.
+**Pi dispatch**: Pi uses the `subagent` tool (from the optional `pi-subagents` package) with project-level agents registered in `.agents/pr-review-handler/`. Phase 0 auto-creates these from templates shipped in the skill package. Once registered, dispatch with agent name `pr-review-handler.triage` (Phase 1) or `pr-review-handler.implementation` (Phase 2) — the task prompt contains only the input data, since the agent carries its own system prompt. If `pi-subagents` is not installed (no `subagent` tool), fall back to inline execution.
 
 **Inline fallback**: if no `subagent` tool (Pi) or no subtask mechanism (other platforms), read each spec and execute its steps yourself, one thread at a time.
 
@@ -150,9 +150,9 @@ broader context.
 If you have a `subagent` tool (Pi with pi-subagents installed), ensure project agents are registered before Phase 1 dispatch. The skill ships templates in `agents/pr-review-handler/` (relative to this SKILL.md). Copy them into the project if missing — do not overwrite if already present (user may have customized):
 
 ```bash
-mkdir -p .agents/agents/pr-review-handler
-[ -f .agents/agents/pr-review-handler/triage.md ] || cp <skill_dir>/agents/pr-review-handler/triage.md .agents/agents/pr-review-handler/
-[ -f .agents/agents/pr-review-handler/implementation.md ] || cp <skill_dir>/agents/pr-review-handler/implementation.md .agents/agents/pr-review-handler/
+mkdir -p .agents/pr-review-handler
+[ -f .agents/pr-review-handler/triage.md ] || cp <skill_dir>/agents/pr-review-handler/triage.md .agents/pr-review-handler/
+[ -f .agents/pr-review-handler/implementation.md ] || cp <skill_dir>/agents/pr-review-handler/implementation.md .agents/pr-review-handler/
 ```
 
 Replace `<skill_dir>` with the absolute path to the directory containing this SKILL.md. This registers `pr-review-handler.triage` and `pr-review-handler.implementation` as project-level agents, callable via the `subagent` tool with task prompts containing only the input data.
