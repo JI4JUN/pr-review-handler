@@ -163,7 +163,7 @@ Replace `<skill_dir>` with the absolute path to the directory containing this SK
 
 Triage is read-only — safe to parallelize.
 
-- **Pi with `subagent` tool**: Use `pr-review-handler.triage` project agent. Spawn one per thread in PARALLEL mode. Task prompt = input data ONLY (agent carries its own system prompt).
+- **Pi with `subagent` tool**: Use `pr-review-handler.triage` project agent. Spawn one per thread in PARALLEL mode. Pass `acceptance: "attested"` (triage is read-only analysis — no tests/commands evidence needed). Task prompt = input data ONLY (agent carries its own system prompt).
 - **Other platforms with subtask tool** (Task tool / background agent): embed `agents/triage-agent.md` spec into the task prompt + input data. Spawn one subtask per thread in parallel.
 - **No subtask mechanism**: run inline, one thread at a time.
 
@@ -249,7 +249,7 @@ prior_changes: <list of previous fixes in this PR, if any>
 
 Embed the Implementation Agent spec (`agents/implementation-agent.md`) into the task prompt so the subtask has the full role instructions, then append the verdict data above.
 
-**Pi dispatch**: Use `pr-review-handler.implementation` project agent, SINGLE mode — one subtask per fix, awaited in turn (serial). Task prompt = verdict data ONLY. Pass `prior_changes` by collecting each completed subtask's output and appending it to the next subtask's input.
+**Pi dispatch**: Use `pr-review-handler.implementation` project agent, SINGLE mode — one subtask per fix, awaited in turn (serial). Pass `acceptance: "attested"` (review fixes are often small and don't require new tests; the orchestrator runs its own verification after all fixes). Task prompt = verdict data ONLY. Pass `prior_changes` by collecting each completed subtask's output and appending it to the next subtask's input.
 
 **Other platforms**: embed `agents/implementation-agent.md` spec into the task prompt + verdict data, dispatch via your subtask tool (serial).
 
