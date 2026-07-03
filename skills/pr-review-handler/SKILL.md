@@ -41,7 +41,7 @@ Agent specs live in `agents/` relative to this skill (`agents/triage-agent.md`, 
 
 | Platform | Dispatch mechanism |
 |----------|-------------------|
-| Pi | `subagent` tool if [pi-subagents](https://www.npmjs.com/package/pi-subagents) is installed, else inline fallback |
+| Pi | `pr-review-handler.triage` / `pr-review-handler.implementation` project agents via `subagent` tool (auto-created in Phase 0), else inline |
 | Claude Code | Task tool |
 | Cursor | background agent |
 | Gemini CLI / OpenCode / others | native subtask mechanism if available |
@@ -49,9 +49,9 @@ Agent specs live in `agents/` relative to this skill (`agents/triage-agent.md`, 
 
 **Dispatch pattern**: read the relevant agent spec, embed its instructions into the task prompt along with the thread-specific input data (thread info for triage, verdict data for implementation), and launch one subtask per thread. Triage is read-only so subtasks run in parallel; implementation writes files so it runs serially.
 
-**Pi dispatch capability**: Pi does not bundle a subtask mechanism — it depends on the optional `pi-subagents` package (recommended in the project README). To detect it, look in your available tools list for a tool **literally named `subagent`** (the exact tool name, not a description match). If you see a tool named `subagent`, it is available — use it (PARALLEL mode for triage, SINGLE mode serially for implementation). If no tool named `subagent` appears in your tool list, fall back to inline execution. Do not assume pi-subagents is installed, and do not error if it is missing — the skill degrades gracefully either way.
+**Pi dispatch**: Pi uses the `subagent` tool (from the optional `pi-subagents` package) with project-level agents registered in `.agents/agents/pr-review-handler/`. Phase 0 auto-creates these from templates shipped in the skill package. Once registered, dispatch with agent name `pr-review-handler.triage` (Phase 1) or `pr-review-handler.implementation` (Phase 2) — the task prompt contains only the input data, since the agent carries its own system prompt. If `pi-subagents` is not installed (no `subagent` tool), fall back to inline execution.
 
-**Inline fallback**: if the `subagent` tool is not available (e.g. pi-subagents not installed) or the platform has no subtask mechanism, you (the orchestrator) read each spec and perform its steps yourself, one thread at a time. The specs are written as direct instructions, so inline execution is straightforward.
+**Inline fallback**: if no `subagent` tool (Pi) or no subtask mechanism (other platforms), read each spec and execute its steps yourself, one thread at a time.
 
 ## Phase 0: Setup
 
@@ -145,20 +145,31 @@ pass only the hunks relevant to that thread's `path` as `pr_diff_context`. If
 the total diff is small (< 500 lines), pass the full diff to every agent for
 broader context.
 
+### Ensure project agents (Pi only)
+
+If you have a `subagent` tool (Pi with pi-subagents installed), ensure project agents are registered before Phase 1 dispatch. The skill ships templates in `agents/pr-review-handler/` (relative to this SKILL.md). Copy them into the project if missing — do not overwrite if already present (user may have customized):
+
+```bash
+mkdir -p .agents/agents/pr-review-handler
+[ -f .agents/agents/pr-review-handler/triage.md ] || cp <skill_dir>/agents/pr-review-handler/triage.md .agents/agents/pr-review-handler/
+[ -f .agents/agents/pr-review-handler/implementation.md ] || cp <skill_dir>/agents/pr-review-handler/implementation.md .agents/agents/pr-review-handler/
+```
+
+Replace `<skill_dir>` with the absolute path to the directory containing this SKILL.md. This registers `pr-review-handler.triage` and `pr-review-handler.implementation` as project-level agents, callable via the `subagent` tool with task prompts containing only the input data.
+
 ## Phase 1: Triage (parallel dispatch)
 
 ### Dispatch strategy
 
 Triage is read-only — safe to parallelize.
 
-**Check your available tools now.** Look for a tool literally named `subagent` (provided by the pi-subagents extension on Pi, or equivalent subtask tool on other platforms).
+- **Pi with `subagent` tool**: Use `pr-review-handler.triage` project agent. Spawn one per thread in PARALLEL mode. Task prompt = input data ONLY (agent carries its own system prompt).
+- **Other platforms with subtask tool** (Task tool / background agent): embed `agents/triage-agent.md` spec into the task prompt + input data. Spawn one subtask per thread in parallel.
+- **No subtask mechanism**: run inline, one thread at a time.
 
-- **`subagent` tool present**: Use PARALLEL dispatch. Spawn one Triage Agent per thread simultaneously. (Phase 2 Implementation uses SINGLE mode serially — fixes write files.)
-- **No `subagent` tool**: Run inline, one thread at a time, same triage logic.
+Thread-count rules:
 
-Thread-count rules (apply after detecting the tool):
-
-- **≥3 threads + `subagent` available** → parallel, one agent per thread
+- **≥3 threads + subtask available** → parallel, one agent per thread
 - **≤2 threads** → inline regardless (overhead not worth it)
 - **>15 threads** → batch by file path, 8–10 threads per batch, dispatch one batch at a time (serial batches, parallel within each batch). Collect verdicts across batches before Checkpoint 1.
 
@@ -238,7 +249,11 @@ prior_changes: <list of previous fixes in this PR, if any>
 
 Embed the Implementation Agent spec (`agents/implementation-agent.md`) into the task prompt so the subtask has the full role instructions, then append the verdict data above.
 
-**Pi dispatch**: if the `subagent` tool is available, use SINGLE mode — one subtask per fix, awaited in turn (serial). Pass `prior_changes` by collecting each completed subtask's output and appending it to the next subtask's input. If `subagent` is unavailable, execute the Implementation Agent spec inline, one thread at a time.
+**Pi dispatch**: Use `pr-review-handler.implementation` project agent, SINGLE mode — one subtask per fix, awaited in turn (serial). Task prompt = verdict data ONLY. Pass `prior_changes` by collecting each completed subtask's output and appending it to the next subtask's input.
+
+**Other platforms**: embed `agents/implementation-agent.md` spec into the task prompt + verdict data, dispatch via your subtask tool (serial).
+
+**No subtask mechanism**: execute the Implementation Agent spec inline, one thread at a time.
 
 After each agent completes:
 

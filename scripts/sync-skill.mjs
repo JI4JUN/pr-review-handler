@@ -109,4 +109,50 @@ if (skillName !== SOURCE_SKILL_NAME) {
 	console.log(`Rewrote skill name → ${skillName}`);
 }
 
+// Generate project agent templates for pi-subagents from the spec files.
+// These are build artifacts (gitignored) — derived from agents/*-agent.md
+// so there is a single source of truth. Phase 0 copies them into the
+// target project's .agents/agents/pr-review-handler/ to register
+// `pr-review-handler.triage` and `pr-review-handler.implementation`.
+const agentsDir = resolve(dest, "agents");
+const projectAgentsDir = resolve(agentsDir, "pr-review-handler");
+await mkdir(projectAgentsDir, { recursive: true });
+
+const triageSpec = await readFile(resolve(agentsDir, "triage-agent.md"), "utf8");
+const implSpec = await readFile(resolve(agentsDir, "implementation-agent.md"), "utf8");
+
+// Strip the leading "# Triage Agent" / "# Implementation Agent" title —
+// project agents go straight to the system prompt body.
+const stripTitle = (s) => s.replace(/^# .+\n+/, "");
+
+const triageAgent = `---
+name: triage
+package: pr-review-handler
+description: PR review triage specialist — read-only verdict classifier for review threads
+systemPromptMode: replace
+inheritProjectContext: true
+inheritSkills: false
+tools: read, bash, mcp:codegraph
+defaultContext: fresh
+---
+
+${stripTitle(triageSpec)}`;
+
+const implAgent = `---
+name: implementation
+package: pr-review-handler
+description: PR review code fix specialist — applies minimal surgical fixes for one review thread
+systemPromptMode: replace
+inheritProjectContext: true
+inheritSkills: false
+tools: read, bash, edit, write, mcp:codegraph
+defaultContext: fresh
+---
+
+${stripTitle(implSpec)}`;
+
+await writeFile(resolve(projectAgentsDir, "triage.md"), triageAgent, "utf8");
+await writeFile(resolve(projectAgentsDir, "implementation.md"), implAgent, "utf8");
+console.log(`Generated project agent templates → agents/pr-review-handler/`);
+
 console.log(`Synced skill → ${dest} (name: ${skillName})`);

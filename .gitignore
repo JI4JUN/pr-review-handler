@@ -5,4 +5,7 @@ package-lock.json
 
 # Synced skill copies — generated from skills/pr-review-handler/ by sync-skill.mjs
 packages/*/skills/
+
+# Generated project agent templates — derived from agents/*-agent.md by sync-skill.mjs
+skills/pr-review-handler/agents/pr-review-handler/
 .tmp
