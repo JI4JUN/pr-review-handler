@@ -29,12 +29,35 @@ Pi auto-discovers the skill under `skills/pr-review-handler/`.
 ```
 node_modules/@trashcodermaker/pi-pr-review-handler/
 └── skills/
-    └── pr-review-handler/
+    └── pi-pr-review-handler/
         ├── SKILL.md              # the skill instructions
         └── agents/
-            ├── triage-agent.md
-            └── implementation-agent.md
+            ├── triage-agent.md          # spec (inline mode)
+            ├── implementation-agent.md  # spec
+            └── pr-review-handler/       # project agent templates (pi-subagents)
+                ├── triage.md
+                └── implementation.md
 ```
+
+## Recommended companion tools
+
+### pi-subagents (recommended)
+
+Pi has no native subtask mechanism. With [`pi-subagents`](https://github.com/nicobailon/pi-subagents) installed, the skill auto-creates project agents and dispatches them via the `subagent` tool (parallel triage, serial implementation). Without it, runs inline.
+
+```bash
+pi install npm:pi-subagents
+```
+
+The skill auto-creates project agents (`pr-review-handler.triage`, `pr-review-handler.implementation`) in Phase 0 and dispatches them via the `subagent` tool.
+
+### CodeGraph (optional, enhances agent quality)
+
+The Triage and Implementation agents reference `mcp:codegraph` in their tool list. [CodeGraph](https://github.com/colbymchenry/codegraph) is a semantic code intelligence MCP server — symbol lookup, call-edge traversal, and blast-radius analysis beyond `grep`.
+
+**Why**: triage uses it to find all callers accurately (`affected_files`); implementation traces references that grep might miss.
+
+**Install**: see the [CodeGraph repo](https://github.com/colbymchenry/codegraph). `codegraph install` auto-configures Claude Code, Cursor, Codex, etc. — for Pi, add the CodeGraph MCP server to your Pi MCP configuration manually. Falls back to `grep`/`find` if not installed.
 
 ## How it works
 
@@ -61,7 +84,7 @@ Reads the referenced code and each review thread, then classifies every comment 
 - `valid-nofix` — the concern is valid, but no code change is needed
 - `invalid` — the premise doesn't apply to current code, or the suggested fix would be harmful
 
-If there are many threads and the platform supports parallel agents, triage runs in parallel for speed.
+With [`pi-subagents`](https://github.com/nicobailon/pi-subagents) installed, triage runs in parallel — one `pr-review-handler.triage` project agent per thread. Without it, runs inline.
 
 > [!TIP]
 > Triage is intentionally conservative. If a comment is unclear, mark it `invalid` with the reason `unclear — needs human review`.
@@ -72,13 +95,7 @@ For each `valid-fix` thread, a specialized implementation agent applies the smal
 
 All fixes are committed locally, but **never pushed** during this phase.
 
-After all fixes:
-
-```bash
-npx tsc --noEmit
-```
-
-If type checking fails, the pipeline identifies the offending commit, reverts it, fixes the issue, and recommits before continuing.
+After all fixes, the pipeline runs the project's type checker or equivalent verification (auto-detected: `tsc` for TypeScript, `ruff`/`mypy` for Python, `go build` for Go, `cargo check` for Rust, etc.). If it fails, the pipeline identifies the offending commit, reverts it, fixes the issue, and recommits before continuing.
 
 ### Phase 3: Reply
 
@@ -129,20 +146,17 @@ Or trigger the skill directly:
 /skill:pr-review-handler
 ```
 
-> [!TIP]
-> Pi has no native subtask mechanism. By default the skill runs inline (the orchestrator executes the agent specs itself). For subtask-based dispatch with fresh context per thread, install the [`pi-subagents`](https://github.com/nicobailon/pi-subagents) extension (`pi install npm:pi-subagents`).
-
 ## Requirements
 
 - GitHub CLI (`gh`) installed and authenticated
 - A Git working tree clean enough to create review-fix commits
-- Node.js / TypeScript project if you want the final `tsc --noEmit` check
+- A project with a type checker or linter (TypeScript, Python, Go, Rust, etc.) for the post-fix verification — auto-detected, skipped if none recognized
 
 ## Supported platforms
 
 | Platform | Support |
 | --- | --- |
-| Pi | ✅ This package. Inline by default; install [`pi-subagents`](https://github.com/nicobailon/pi-subagents) for subtask dispatch. |
+| Pi | ✅ This package. Uses `pr-review-handler.triage` / `pr-review-handler.implementation` project agents via [`pi-subagents`](https://github.com/nicobailon/pi-subagents) (auto-created in Phase 0); inline fallback if not installed. |
 | Other harnesses (Claude Code, Cursor, Gemini CLI, OpenCode, …) | ✅ Use [`@trashcodermaker/pr-review-handler`](https://www.npmjs.com/package/@trashcodermaker/pr-review-handler) instead |
 
 ## License

@@ -1,8 +1,9 @@
 {
   "name": "@trashcodermaker/pi-pr-review-handler",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "description": "Systematically process GitHub PR review comments: triage for validity, fix code, and post replies. Pi package — install with `pi install npm:@trashcodermaker/pi-pr-review-handler`.",
   "type": "module",
+  "author": "trashcodemaker",
   "license": "MIT",
   "private": false,
   "keywords": [

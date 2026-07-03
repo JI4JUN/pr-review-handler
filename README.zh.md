@@ -122,7 +122,7 @@ review 级别的整体反馈。本阶段只做数据准备，不修改代码。
 - `valid-nofix` — 问题成立，但不需要改代码
 - `invalid` — 前提不适用于当前代码，或建议的修复反而有害
 
-如果线程很多且平台支持并行 agent，Triage 会并行执行以提高速度。
+在 Pi 且装有 pi-subagents 时，Triage 通过 `pr-review-handler.triage` project agent 并行执行；其他平台用各自子任务机制；无子任务机制则内联。
 
 > [!TIP]
 > Triage 默认偏保守。如果某条评论含义不清，可直接标记为 `invalid`，原因写
@@ -136,14 +136,7 @@ review 级别的整体反馈。本阶段只做数据准备，不修改代码。
 
 本阶段所有修复都会提交到本地，但 **不会推送**。
 
-全部修复完成后会执行：
-
-```bash
-npx tsc --noEmit
-```
-
-如果类型检查失败，流程会自动定位引入错误的提交，回滚、修复后重新提交，再继续
-后续阶段。
+全部修复完成后，流程会运行项目的类型检查或等效验证（自动检测：TypeScript 用 `tsc`、Python 用 `ruff`/`mypy`、Go 用 `go build`、Rust 用 `cargo check` 等）。如果验证失败，流程会自动定位引入错误的提交，回滚、修复后重新提交，再继续后续阶段。
 
 ### Phase 3: Reply
 
@@ -233,7 +226,7 @@ npm run publish:core    # 或 npm run publish:pi
 
 - 已安装并登录 GitHub CLI（`gh`）
 - Git 工作区足够干净，可以创建 review-fix 提交
-- 若想执行最后的 `tsc --noEmit` 检查，项目应为 Node.js / TypeScript 项目
+- 项目需有类型检查器或 linter（TypeScript、Python、Go、Rust 等）用于修复后验证 — 自动检测，无则跳过
 
 ## 支持的平台
 
@@ -261,7 +254,7 @@ Triage 和 Implementation project agent 的工具列表引用了 `mcp:codegraph`
 ## 备注
 
 - 项目在 `agents/` 中提供可复用的 agent 规格。
-- 若平台支持并行 agent，Triage 可并行执行；否则以内联方式运行。
+- 在 Pi 且装有 pi-subagents 时，Triage 通过 `pr-review-handler.triage` project agent 并行执行；其他平台用各自子任务机制；无则内联。
 - 流程中有两处会暂停等待确认：一次在 Triage 结论出来后，一次在发布回复前。
 - 推送仅在回复确认后执行一次。
 - Fix 阶段默认串行执行，以避免并发修改带来的冲突。

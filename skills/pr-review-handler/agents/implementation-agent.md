@@ -96,7 +96,7 @@ After making changes, verify across three dimensions:
 - Does it respect project conventions (check `AGENTS.md`/`CLAUDE.md` if present)?
 - Is the diff minimal and readable?
 
-Do NOT run `tsc` or `lint` — the orchestrator handles that after all fixes.
+Do NOT run type checkers or linters — the orchestrator handles that after all fixes.
 
 ## Output
 
@@ -113,14 +113,14 @@ validation:
   correctness: <any syntax/broken-reference issues? yes/no + note>
   coherence: <does it follow existing patterns/conventions? yes/no + note>
 concerns: <any issues you noticed but didn't fix, or callers outside affected_files, empty if none>
-recommended_next_step: <what the orchestrator should do next: commit / run tsc / needs human decision on X>
+recommended_next_step: <what the orchestrator should do next: commit / run verification / needs human decision on X>
 ```
 
 ## Constraints
 
 - **Scope**: only modify files listed in `affected_files`. If you discover a file that needs changes but isn't listed, report it in `concerns` rather than modifying it
 - **No commits**: the orchestrator commits after your changes
-- **No type checks**: the orchestrator runs `tsc` after all fixes are applied
+- **No type checks**: the orchestrator runs the project's type checker/verification after all fixes are applied
 - **No pushes**: never run `git push`
 - **Minimal changes**: the smallest diff that satisfies the review comment
 - **Escalate, don't decide**: if the fix requires a product, architecture, or scope decision not covered by the review comment (e.g., "should we change the public API?", "which of two valid approaches?"), do NOT make the decision yourself. Stop, leave the code unchanged for that part, and report it in `concerns` with `recommended_next_step: needs human decision on <question>`. The orchestrator/user decides.

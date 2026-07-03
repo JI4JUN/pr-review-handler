@@ -135,8 +135,7 @@ comment as:
 - `invalid` — the premise doesn't apply to current code, or the suggested fix
   would be harmful
 
-If there are many threads and the platform supports parallel agents, triage
-runs in parallel for speed.
+On Pi with pi-subagents, triage runs in parallel via `pr-review-handler.triage` project agents. On other harnesses, runs via the harness's subtask mechanism. Falls back to inline if no subtask mechanism.
 
 > [!TIP]
 > Triage is intentionally conservative. If a comment is unclear, mark it
@@ -151,14 +150,7 @@ avoids unrelated cleanup or refactors.
 
 All fixes are committed locally, but **never pushed** during this phase.
 
-After all fixes:
-
-```bash
-npx tsc --noEmit
-```
-
-If type checking fails, the pipeline identifies the offending commit,
-reverts it, fixes the issue, and recommits before continuing.
+After all fixes, the pipeline runs the project's type checker or equivalent verification (auto-detected: `tsc` for TypeScript, `ruff`/`mypy` for Python, `go build` for Go, `cargo check` for Rust, etc.). If it fails, the pipeline identifies the offending commit, reverts it, fixes the issue, and recommits before continuing.
 
 ### Phase 3: Reply
 
@@ -253,7 +245,7 @@ into an agent-friendly pipeline.
 
 - GitHub CLI (`gh`) installed and authenticated
 - A Git working tree clean enough to create review-fix commits
-- Node.js / TypeScript project if you want the final `tsc --noEmit` check
+- A project with a type checker or linter (TypeScript, Python, Go, Rust, etc.) for the post-fix verification — auto-detected, skipped if none recognized
 
 ## Supported platforms
 
@@ -281,8 +273,7 @@ The Triage and Implementation project agents reference `mcp:codegraph` in their 
 ## Notes
 
 - Agent specs are provided in `agents/` for reuse across platforms.
-- When a platform supports parallel agents, triage can run in parallel;
-  otherwise it runs inline.
+- On Pi with pi-subagents, triage runs in parallel via `pr-review-handler.triage` project agents; on other harnesses, via their subtask mechanism; otherwise inline.
 - There are two checkpoints where execution pauses for confirmation: after
   triage verdicts, and before posting replies.
 - Pushes only happen once, after replies are approved.

@@ -32,8 +32,11 @@ node_modules/@trashcodermaker/pr-review-handler/
     └── pr-review-handler/
         ├── SKILL.md              # the skill instructions
         └── agents/
-            ├── triage-agent.md
-            └── implementation-agent.md
+            ├── triage-agent.md          # spec (inline mode)
+            ├── implementation-agent.md  # spec
+            └── pr-review-handler/       # project agent templates (pi-subagents)
+                ├── triage.md
+                └── implementation.md
 ```
 
 Point your agent at `node_modules/@trashcodermaker/pr-review-handler/skills/pr-review-handler/SKILL.md`, or copy the `skills/pr-review-handler/` directory into your agent's skill discovery path.
@@ -63,7 +66,7 @@ Reads the referenced code and each review thread, then classifies every comment 
 - `valid-nofix` — the concern is valid, but no code change is needed
 - `invalid` — the premise doesn't apply to current code, or the suggested fix would be harmful
 
-If there are many threads and the platform supports parallel agents, triage runs in parallel for speed.
+On Pi with pi-subagents, triage runs in parallel via `pr-review-handler.triage` project agents. On other harnesses (Claude Code Task tool, Cursor background agent), runs via the harness's subtask mechanism. Falls back to inline if no subtask mechanism.
 
 > [!TIP]
 > Triage is intentionally conservative. If a comment is unclear, mark it `invalid` with the reason `unclear — needs human review`.
@@ -74,13 +77,7 @@ For each `valid-fix` thread, a specialized implementation agent applies the smal
 
 All fixes are committed locally, but **never pushed** during this phase.
 
-After all fixes:
-
-```bash
-npx tsc --noEmit
-```
-
-If type checking fails, the pipeline identifies the offending commit, reverts it, fixes the issue, and recommits before continuing.
+After all fixes, the pipeline runs the project's type checker or equivalent verification (auto-detected: `tsc` for TypeScript, `ruff`/`mypy` for Python, `go build` for Go, `cargo check` for Rust, etc.). If it fails, the pipeline identifies the offending commit, reverts it, fixes the issue, and recommits before continuing.
 
 ### Phase 3: Reply
 
@@ -129,14 +126,14 @@ When installed as a skill, invoke it from your agent with natural language. Exam
 
 - GitHub CLI (`gh`) installed and authenticated
 - A Git working tree clean enough to create review-fix commits
-- Node.js / TypeScript project if you want the final `tsc --noEmit` check
+- A project with a type checker or linter (TypeScript, Python, Go, Rust, etc.) for the post-fix verification — auto-detected, skipped if none recognized
 
 ## Supported platforms
 
 | Platform | Support |
 | --- | --- |
 | npm / Node.js | ✅ Install `@trashcodermaker/pr-review-handler` as a published package |
-| Pi | ✅ Install [`@trashcodermaker/pi-pr-review-handler`](https://www.npmjs.com/package/@trashcodermaker/pi-pr-review-handler) via `pi install`. For subtask-based dispatch (fresh context per thread), install the [`pi-subagents`](https://github.com/nicobailon/pi-subagents) extension (`pi install npm:pi-subagents`); otherwise the skill runs inline. |
+| Pi | ✅ Install [`@trashcodermaker/pi-pr-review-handler`](https://www.npmjs.com/package/@trashcodermaker/pi-pr-review-handler) via `pi install`. With [`pi-subagents`](https://github.com/nicobailon/pi-subagents), uses `pr-review-handler.triage`/`pr-review-handler.implementation` project agents (auto-created); otherwise inline. |
 | Claude Code | ✅ Task-based agent dispatch, or `npx skills add JI4JUN/pr-review-handler --skill pr-review-handler` |
 | Cursor | ✅ Background agent dispatch |
 | Gemini CLI / OpenCode / others | ✅ Native subtask mechanism, or inline fallback |

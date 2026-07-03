@@ -2,6 +2,7 @@
   "name": "pr-review-handler-monorepo",
   "private": true,
   "description": "Monorepo for pr-review-handler agent skill. See packages/ for the published npm packages.",
+  "author": "trashcodemaker",
   "license": "MIT",
   "workspaces": [
     "packages/*"
