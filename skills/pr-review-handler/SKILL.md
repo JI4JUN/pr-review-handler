@@ -147,12 +147,12 @@ broader context.
 
 ### Ensure project agents (Pi only)
 
-If you have a `subagent` tool (Pi with pi-subagents installed), ensure project agents are registered before Phase 1 dispatch. The skill ships templates in `agents/pr-review-handler/` (relative to this SKILL.md). Copy them into the project if missing — do not overwrite if already present (user may have customized):
+If you have a `subagent` tool (Pi with pi-subagents installed), ensure project agents are registered before Phase 1 dispatch. The skill ships templates in `agents/pr-review-handler/` (relative to this SKILL.md). Always overwrite with the latest templates from the installed package — these are generated artifacts, not user-editable (customize the source specs in the skill package instead):
 
 ```bash
 mkdir -p .agents/pr-review-handler
-[ -f .agents/pr-review-handler/triage.md ] || cp <skill_dir>/agents/pr-review-handler/triage.md .agents/pr-review-handler/
-[ -f .agents/pr-review-handler/implementation.md ] || cp <skill_dir>/agents/pr-review-handler/implementation.md .agents/pr-review-handler/
+cp -f <skill_dir>/agents/pr-review-handler/triage.md .agents/pr-review-handler/
+cp -f <skill_dir>/agents/pr-review-handler/implementation.md .agents/pr-review-handler/
 ```
 
 Replace `<skill_dir>` with the absolute path to the directory containing this SKILL.md. This registers `pr-review-handler.triage` and `pr-review-handler.implementation` as project-level agents, callable via the `subagent` tool with task prompts containing only the input data.
