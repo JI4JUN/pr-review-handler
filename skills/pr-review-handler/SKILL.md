@@ -149,18 +149,18 @@ broader context.
 
 ### Dispatch strategy
 
-Triage is read-only — safe to parallelize. First detect dispatch capability:
+Triage is read-only — safe to parallelize.
 
-- **Pi with `subagent` tool available** (pi-subagents installed): use PARALLEL mode — spawn one Triage Agent subtask per thread simultaneously. For implementation (Phase 2), use SINGLE mode serially — each fix is a separate subtask, one at a time, because fixes write files.
-- **No `subagent` tool / no subtask mechanism**: run inline, same logic, one thread at a time.
+**Check your available tools now.** Look for a tool literally named `subagent` (provided by the pi-subagents extension on Pi, or equivalent subtask tool on other platforms).
 
-Then choose a strategy based on thread count:
+- **`subagent` tool present**: Use PARALLEL dispatch. Spawn one Triage Agent per thread simultaneously. (Phase 2 Implementation uses SINGLE mode serially — fixes write files.)
+- **No `subagent` tool**: Run inline, one thread at a time, same triage logic.
 
-- **≥3 threads + parallel capability**: spawn one Triage Agent per thread simultaneously
-- **≤2 threads or no parallel capability**: run inline, same logic
-- **Large PR (> 15 threads)**: batch by file path to keep context manageable. Group threads sharing the same `path` into the same batch (they share `pr_diff_context`, saving tokens). Dispatch one batch at a time, 8–10 threads per batch. Collect verdicts across batches before presenting Checkpoint 1. This avoids spawning dozens of subagents at once, which can hit API rate limits and produce a verdict table too long for the user to review.
+Thread-count rules (apply after detecting the tool):
 
-If unsure about parallel capability, default to inline.
+- **≥3 threads + `subagent` available** → parallel, one agent per thread
+- **≤2 threads** → inline regardless (overhead not worth it)
+- **>15 threads** → batch by file path, 8–10 threads per batch, dispatch one batch at a time (serial batches, parallel within each batch). Collect verdicts across batches before Checkpoint 1.
 
 ### Dispatch
 
