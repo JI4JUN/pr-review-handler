@@ -266,6 +266,18 @@ into an agent-friendly pipeline.
 | Gemini CLI / OpenCode / others | ✅ Native subtask mechanism, or inline fallback |
 | skills CLI | ✅ `npx skills add JI4JUN/pr-review-handler --skill pr-review-handler` |
 
+## Recommended companion tools
+
+### CodeGraph (optional, enhances triage & implementation)
+
+The Triage and Implementation project agents reference `mcp:codegraph` in their tool list. [CodeGraph](https://github.com/colbymchenry/codegraph) is a semantic code intelligence MCP server — it provides symbol lookup, call-edge traversal, and blast-radius analysis that goes beyond `grep` (handles dynamic dispatch, polymorphism, etc.).
+
+**Why**: when triaging, CodeGraph helps the agent find all callers of a symbol accurately (for `affected_files`). When implementing, it traces references that grep might miss.
+
+**Install**: see the [CodeGraph repo](https://github.com/colbymchenry/codegraph). After installing the CLI (`curl -fsSL https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.sh | sh`), run `codegraph install` to wire it into your agent, then `codegraph init` in each project.
+
+**Pi users**: CodeGraph's `install` command auto-configures Claude Code, Cursor, Codex, and others, but not Pi. Add the CodeGraph MCP server to your Pi MCP configuration manually. If CodeGraph is not installed, the agents fall back to `grep`/`find` — the skill still works, just with less precise reference discovery.
+
 ## Notes
 
 - Agent specs are provided in `agents/` for reuse across platforms.

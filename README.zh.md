@@ -246,6 +246,18 @@ npm run publish:core    # 或 npm run publish:pi
 | Gemini CLI / OpenCode / 其他 | ✅ 原生子任务机制，或内联回退 |
 | skills CLI | ✅ `npx skills add JI4JUN/pr-review-handler --skill pr-review-handler` |
 
+## 推荐配套工具
+
+### CodeGraph（可选，增强 triage 与 implementation）
+
+Triage 和 Implementation project agent 的工具列表引用了 `mcp:codegraph`。[CodeGraph](https://github.com/colbymchenry/codegraph) 是语义代码图谱 MCP server — 提供符号查找、调用边遍历、爆炸半径分析，能力超越 `grep`（能处理动态分发、多态等）。
+
+**为什么需要**：triage 时，CodeGraph 帮 agent 精确找到符号的所有调用方（补全 `affected_files`）；implementation 时，能追踪 grep 可能遗漏的引用。
+
+**安装**：见 [CodeGraph repo](https://github.com/colbymchenry/codegraph)。安装 CLI 后（`curl -fsSL https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.sh | sh`），运行 `codegraph install` 接入你的 agent，然后在每个项目运行 `codegraph init`。
+
+**Pi 用户**：CodeGraph 的 `install` 命令自动配置 Claude Code、Cursor、Codex 等，但不支持 Pi。需手动在 Pi 的 MCP 配置中添加 CodeGraph MCP server。若未安装 CodeGraph，agent 回退到 `grep`/`find` — skill 仍可用，只是引用发现精度降低。
+
 ## 备注
 
 - 项目在 `agents/` 中提供可复用的 agent 规格。

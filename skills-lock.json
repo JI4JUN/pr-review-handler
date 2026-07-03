@@ -6,6 +6,12 @@
       "sourceType": "github",
       "skillPath": "skills/create-readme/SKILL.md",
       "computedHash": "d0ece1b2164ce1376e4ab6e98d6ac079df3a2a94f5f02224362b6a1ce2516ae9"
+    },
+    "subagent-creator": {
+      "source": "tech-leads-club/agent-skills",
+      "sourceType": "github",
+      "skillPath": "packages/skills-catalog/skills/(creation)/subagent-creator/SKILL.md",
+      "computedHash": "bef6b5a9f23b3186af259c1041c2561e9af15fa94810009d72d775bb217aa3ca"
     }
   }
 }

@@ -138,7 +138,8 @@ description: PR review triage specialist — read-only verdict classifier for re
 systemPromptMode: replace
 inheritProjectContext: true
 inheritSkills: false
-tools: read, bash, mcp:codegraph
+tools: read, grep, find, ls, bash, mcp:codegraph
+thinking: high
 defaultContext: fresh
 ---
 
@@ -151,7 +152,8 @@ description: PR review code fix specialist — applies minimal surgical fixes fo
 systemPromptMode: replace
 inheritProjectContext: true
 inheritSkills: false
-tools: read, bash, edit, write, mcp:codegraph
+tools: read, grep, find, ls, bash, edit, write, mcp:codegraph
+thinking: high
 defaultContext: fresh
 ---
 
