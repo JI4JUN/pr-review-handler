@@ -75,9 +75,9 @@ On Pi with pi-subagents, triage runs in parallel via `pr-review-handler.triage` 
 
 For each `valid-fix` thread, a specialized implementation agent applies the smallest possible change that satisfies the review. The agent traces references first, updates callers and tests when signatures change, and avoids unrelated cleanup or refactors.
 
-All fixes are committed locally, but **never pushed** during this phase.
+All fixes are committed as a single commit, but **never pushed** during this phase.
 
-After all fixes, the pipeline runs the project's type checker or equivalent verification (auto-detected: `tsc` for TypeScript, `ruff`/`mypy` for Python, `go build` for Go, `cargo check` for Rust, etc.). If it fails, the pipeline identifies the offending commit, reverts it, fixes the issue, and recommits before continuing.
+After all fixes, the pipeline runs the project's type checker or equivalent verification (auto-detected: `tsc` for TypeScript, `ruff`/`mypy` for Python, `go build` for Go, `cargo check` for Rust, etc.). If it fails, the pipeline does `git reset --soft` to unstage the commit, fixes the issue, and recommits before continuing.
 
 ### Phase 3: Reply
 
@@ -92,7 +92,7 @@ Replies are matched to the reviewer's language and tone, kept concise, and never
 
 ### Phase 4: Post & Push
 
-Approved replies are posted to GitHub, and all local review-fix commits are pushed in one step.
+Approved replies are posted to GitHub, and the single review-fix commit is pushed.
 
 Optionally, the handler can also:
 
