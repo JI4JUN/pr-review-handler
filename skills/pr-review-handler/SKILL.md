@@ -147,15 +147,18 @@ broader context.
 
 ### Ensure project agents (Pi only)
 
-If you have a `subagent` tool (Pi with pi-subagents installed), ensure project agents are registered before Phase 1 dispatch. The skill ships templates in `agents/pr-review-handler/` (relative to this SKILL.md). Always overwrite with the latest templates from the installed package — these are generated artifacts, not user-editable (customize the source specs in the skill package instead):
+If you have a `subagent` tool (Pi with pi-subagents installed), ensure project agents are registered before Phase 1 dispatch.
+
+Check that both project agent files exist:
 
 ```bash
-mkdir -p .agents/pr-review-handler
-cp -f <skill_dir>/agents/pr-review-handler/triage.md .agents/pr-review-handler/
-cp -f <skill_dir>/agents/pr-review-handler/implementation.md .agents/pr-review-handler/
+test -f .agents/pr-review-handler/triage.md && test -f .agents/pr-review-handler/implementation.md
 ```
 
-Replace `<skill_dir>` with the absolute path to the directory containing this SKILL.md. This registers `pr-review-handler.triage` and `pr-review-handler.implementation` as project-level agents, callable via the `subagent` tool with task prompts containing only the input data.
+- **Both exist** → continue to Phase 1 (subagent dispatch)
+- **Either missing** → notify user: "Project agents not found at `.agents/pr-review-handler/`. Run `/pi-pr-review-handler-sync` to sync them. Continuing inline for this run." → fall back to inline execution (read `agents/triage-agent.md` spec and execute inline)
+
+Do NOT auto-cp or auto-sync. Syncing is the user's responsibility via the `/pi-pr-review-handler-sync` command (a Pi extension bundled with the `@trashcodermaker/pi-pr-review-handler` package).
 
 ## Phase 1: Triage (parallel dispatch)
 

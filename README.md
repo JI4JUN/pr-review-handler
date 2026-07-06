@@ -64,6 +64,10 @@ The skill registers as **`pi-pr-review-handler`** (invoke with
 skill name (`pr-review-handler`) so the two can be installed side-by-side
 in the same environment without a Pi skill-name collision.
 
+> **Pi users**: Run `/pi-pr-review-handler-sync` to sync project agents
+> after install or upgrade. See
+> [packages/pi/README.md](packages/pi/README.md) for details.
+
 > [!IMPORTANT]
 > **Upgrading from ≤ 1.1.3?** Older versions shipped the skill as
 > `pr-review-handler/` inside this package. npm does not always remove

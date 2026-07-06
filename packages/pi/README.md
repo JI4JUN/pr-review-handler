@@ -24,6 +24,16 @@ pi install npm:@trashcodermaker/pi-pr-review-handler
 
 Pi auto-discovers the skill under `skills/pr-review-handler/`.
 
+### Syncing project agents
+
+Project agents (`.agents/pr-review-handler/{triage,implementation}.md`) are generated artifacts synced from this package. Use the `/pi-pr-review-handler-sync` command to sync:
+
+- **First run**: creates `.agents/pr-review-handler/` with latest templates
+- **After upgrade**: overwrites with latest templates (also cleans stale `.agents/agents/pr-review-handler/` from v1.2.3)
+- **Does NOT touch** `.agents/agents/pr-review/` (manual, if present)
+
+The command is a Pi extension bundled with this package — `pi install` auto-loads it. No SKILL.md auto-cp; syncing is explicit and user-triggered.
+
 ## What you get
 
 ```
