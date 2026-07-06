@@ -251,24 +251,25 @@ prior_changes: <list of previous fixes in this PR, if any>
 Embed the Implementation Agent spec (`agents/implementation-agent.md`) into the task prompt so the subtask has the full role instructions, then append the verdict data above.
 
 **Pi dispatch**: Use `pr-review-handler.implementation` project agent, SINGLE mode — one subtask per fix, awaited in turn (serial). Pass `acceptance: { level: "none", reason: "review fixes are often small and add no tests; the implementation agent runs no commands by design; the orchestrator runs its own project-type-detected verification after all fixes" }`. Task prompt = verdict data ONLY. Pass `prior_changes` by collecting each completed subtask's output and appending it to the next subtask's input.
-  - **Why `level: "none"`**: the implementation task contains "fix", so pi-subagents infers `checked`, which requires non-empty `tests-added` + `commands-run` evidence. Review fixes usually add no tests and the agent runs no commands (no tsc/lint — the orchestrator does), so `checked` always rejects. `acceptance: "attested"` does NOT work — an explicit level cannot lower below the inferred `checked`; only `{ level: "none", reason }` disables the gate.
+
+- **Why `level: "none"`**: the implementation task contains "fix", so pi-subagents infers `checked`, which requires non-empty `tests-added` + `commands-run` evidence. Review fixes usually add no tests and the agent runs no commands (no tsc/lint — the orchestrator does), so `checked` always rejects. `acceptance: "attested"` does NOT work — an explicit level cannot lower below the inferred `checked`; only `{ level: "none", reason }` disables the gate.
 
 **Other platforms**: embed `agents/implementation-agent.md` spec into the task prompt + verdict data, dispatch via your subtask tool (serial).
 
 **No subtask mechanism**: execute the Implementation Agent spec inline, one thread at a time.
 
-After each agent completes:
+### After all fixes
+
+Once all Implementation Agents have completed, commit all changes as one:
 
 ```bash
 git add -A
-git commit -m "fix(review): {thread summary}"
+git commit -m "fix(review): address {N} review threads"
 ```
 
-If commit is empty (agent made no changes), skip.
+If no changes were made (all agents skipped), skip to Phase 3.
 
-### After all fixes
-
-Run the project's type checker or equivalent verification. Detect the
+Then run the project's type checker or equivalent verification. Detect the
 project type and run the matching command — do not assume TypeScript:
 
 | Project marker | Command |
@@ -282,8 +283,10 @@ project type and run the matching command — do not assume TypeScript:
 
 If the check fails:
 
-- Identify which commit introduced the error (`git bisect` or check error file paths)
-- `git revert --no-commit {commit}` → fix the error → recommit
+- `git reset --soft HEAD~1` to unstage the commit (keep changes in working tree)
+- Identify the failing fix (check error file paths against `affected_files` from triage verdicts)
+- Fix the error
+- Re-commit
 - Re-run the check until clean
 
 Also check:
@@ -293,7 +296,7 @@ Also check:
 
 ### Never push during this phase
 
-All commits stay local. Push happens once in Phase 4.
+The commit stays local. Push happens once in Phase 4.
 
 ## Phase 3: Reply (orchestrator drafts inline)
 
@@ -370,7 +373,7 @@ gh api -X POST repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/repl
 
 Reply to the top-level comment of each thread (the one with `databaseId`, not a reply). The `{pr_number}` is the PR number (e.g. `561`), and `{comment_id}` is the `databaseId` from Phase 0. Note: the path is `pulls/{pr_number}/comments/...`, **not** `pulls/comments/...` — the latter returns 404.
 
-Push all commits:
+Push the commit:
 
 ```bash
 git push origin HEAD
