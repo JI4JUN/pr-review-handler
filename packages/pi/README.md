@@ -120,7 +120,7 @@ Replies are matched to the reviewer's language and tone, kept concise, and never
 
 ### Phase 4: Post & Push
 
-Approved replies are posted to GitHub, and the single review-fix commit is pushed.
+Approved replies are posted to GitHub. Every thread that received a reply is then auto-resolved via the GraphQL `resolveReviewThread` mutation (simulates clicking "Resolve conversation" on the PR page). Finally, the single review-fix commit is pushed.
 
 Optionally, the handler can also:
 
@@ -136,6 +136,7 @@ A concise summary is printed at the end:
 ✅ Fixes: M/K valid-fix threads applied (committed locally, pushed)
    ❌ Failed: {thread} — {reason}
 ✅ Replies: P/P threads drafted and posted
+✅ Resolved: Q/P conversations resolved (R skipped — already resolved)
 ```
 
 ## Usage

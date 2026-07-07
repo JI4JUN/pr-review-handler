@@ -376,6 +376,42 @@ gh api -X POST repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/repl
 
 Reply to the top-level comment of each thread (the one with `databaseId`, not a reply). The `{pr_number}` is the PR number (e.g. `561`), and `{comment_id}` is the `databaseId` from Phase 0. Note: the path is `pulls/{pr_number}/comments/...`, **not** `pulls/comments/...` — the latter returns 404.
 
+### Resolve conversations
+
+After posting replies, automatically resolve every thread that received a reply (regardless of verdict — the reviewer can reopen if needed). This simulates clicking the "Resolve conversation" button on the PR page.
+
+GitHub's REST API cannot resolve threads; use the GraphQL API.
+
+1. Fetch all review thread node IDs (the thread `id` is NOT the same as a comment `databaseId`):
+
+```bash
+gh api graphql -f query='query($owner:String!,$name:String!,$pr:Int!){
+  repository(owner:$owner,name:$name){
+    pullRequest(number:$pr){
+      reviewThreads(first:100){
+        nodes{
+          id
+          isResolved
+          comments(first:100){nodes{databaseId}}
+        }
+      }
+    }
+  }
+}' -F owner=$OWNER -F name=$REPO -F pr=$PR_NUMBER
+```
+
+1. For each thread that received a reply, match by the original comment's `databaseId` (recorded in Phase 0). If `isResolved == false`, resolve it:
+
+```bash
+gh api graphql -f query='mutation($id:ID!){
+  resolveReviewThread(input:{threadId:$id}){
+    thread{isResolved}
+  }
+}' -F id=$THREAD_ID
+```
+
+Skip threads already resolved. Record each resolve outcome (thread id + success/skip) for the Phase 5 report.
+
 Push the commit:
 
 ```bash
@@ -396,6 +432,7 @@ Output final summary:
 ✅ Fixes: M/K valid-fix threads applied (committed locally, pushed)
    ❌ Failed: {thread} — {reason}
 ✅ Replies: P/P threads drafted and posted
+✅ Resolved: Q/P conversations resolved (R skipped — already resolved)
 ```
 
 ## Pipeline Failure Rules
