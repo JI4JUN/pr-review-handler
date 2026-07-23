@@ -131,26 +131,38 @@ phase prepares everything needed for triage without modifying code.
 
 ### Phase 1: Triage
 
-Reads the referenced code and each review thread, then classifies every
-comment as:
+Reads the referenced code, PR diff context, and each review thread, then
+**verifies the reviewer's claim** and classifies every comment as:
 
-- `valid-fix` — a real issue that requires code changes
-- `valid-nofix` — the concern is valid, but no code change is needed
-- `invalid` — the premise doesn't apply to current code, or the suggested fix
-  would be harmful
+- `valid-fix` — claim **confirmed** with a concrete `code_path`; needs a code change
+- `valid-nofix` — claim has merit, but no code change on this PR
+- `invalid` — claim failed, already handled, or harmful suggested fix
+
+Each verdict also carries evidence fields used at Checkpoint 1:
+
+| Field | Purpose |
+| --- | --- |
+| `claim_check` | `confirmed` \| `failed` \| `insufficient` |
+| `evidence.code_path` | Symbol/control-flow proving a confirmed claim (required for `valid-fix`) |
+| `evidence.in_pr_diff` | Whether the concern is in this PR's diff |
+| `axis` | `standards` \| `spec` \| `both` \| `n/a` |
+| **fix contract** (valid-fix) | `suggested_fix` + `acceptance` (2–4 checkable items) + `out_of_scope` |
+
+`valid-fix` is gated: no confirmed claim + code path → no automatic fix. Unclear threads use `claim_check: insufficient` and surface **Need from user** at Checkpoint 1.
 
 On Pi with pi-subagents, triage runs in parallel via `pr-review-handler.triage` project agents. On other harnesses, runs via the harness's subtask mechanism. Falls back to inline if no subtask mechanism.
 
 > [!TIP]
-> Triage is intentionally conservative. If a comment is unclear, mark it
-> `invalid` with the reason `unclear — needs human review`.
+> Triage is intentionally conservative. If a comment is unclear, set
+> `claim_check: insufficient` and `invalid` with reason `unclear — needs human review`.
 
 ### Phase 2: Fix
 
-For each `valid-fix` thread, a specialized implementation agent applies the
-smallest possible change that satisfies the review. The agent traces
-references first, updates callers and tests when signatures change, and
-avoids unrelated cleanup or refactors.
+For each `valid-fix` thread, a specialized implementation agent applies a
+**minimal fix** against the triage **fix contract** (acceptance checklist +
+out_of_scope). The agent traces references first, updates callers and tests
+when signatures change, and never implements out-of-scope items or drive-by
+refactors.
 
 All fixes are committed as a single commit, but **never pushed** during this phase.
 
@@ -166,7 +178,8 @@ The orchestrator drafts one reply per thread based on:
 - Failure records from Phase 2
 
 Replies are matched to the reviewer's language and tone, kept concise, and
-never defensive.
+never defensive. By default each reply includes a short **AI-assisted**
+footer (strippable at Checkpoint 2). Out-of-PR nits get a stock scope-boundary phrase.
 
 ### Phase 4: Post & Push
 

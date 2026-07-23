@@ -31,8 +31,8 @@ Checkpoints: after Phase 1 (user confirms verdicts) and after Phase 3 (user appr
 
 | Role | Responsibility | Parallelizable |
 |------|---------------|----------------|
-| Triage Agent | Verify comment validity, classify verdict | ✅ Yes (read-only) |
-| Implementation Agent | Apply minimal code fix for one thread | ❌ No (writes files) |
+| Triage Agent | Verify each review **claim** (evidence + verdict), emit fix contract when needed | ✅ Yes (read-only) |
+| Implementation Agent | Apply **minimal fix** for one thread against the fix contract | ❌ No (writes files) |
 | Reply drafting | Orchestrator drafts inline (no separate agent) | N/A |
 
 ### Platform mapping
@@ -194,15 +194,27 @@ pr_diff_context: <diff hunks for {path} from /tmp/pr-{pr_number}.diff, or full d
 
 Embed the Triage Agent spec (`agents/triage-agent.md`) into the task prompt so the subtask has the full role instructions and output format, then append the thread-specific data above. Collect structured verdicts from all agents.
 
+**Collect-verdict gates** (orchestrator enforces before Checkpoint 1):
+
+- If a verdict omits `claim_check` / `evidence`, treat as **insufficient** — do not promote to `valid-fix`.
+- Reject or flag any `verdict: valid-fix` where `claim_check` is not `confirmed` or `evidence.code_path` is empty — force human decision.
+- `claim_check: insufficient` rows must surface **Need from user** (`evidence.missing`) in the table below.
+- `valid-fix` without `acceptance` (2–4 items): ask user to supply AC at Checkpoint 1 before Phase 2, or skip the thread.
+
 ### Checkpoint 1: User confirmation
 
 Present thread verdicts as a summary table:
 
-| # | File:Line | Reviewer | Summary | Verdict | Affected Files |
-|---|-----------|----------|---------|---------|----------------|
-| 1 | src/auth/login.ts:42 | alice | Missing null check | valid-fix | login.ts, types.ts |
-| 2 | src/ui/Button.tsx:18 | bob | Rename for clarity | valid-fix | Button.tsx |
-| 3 | src/api/handler.ts:99 | alice | Add rate limiting | invalid | — |
+| # | File:Line | Reviewer | Summary | Claim | In PR? | Axis | Verdict | Affected |
+|---|-----------|----------|---------|-------|--------|------|---------|----------|
+| 1 | src/auth/login.ts:42 | alice | Missing null check | confirmed | true | spec | valid-fix | login.ts, types.ts |
+| 2 | src/ui/Button.tsx:18 | bob | Rename for clarity | confirmed | false | standards | valid-nofix | — |
+| 3 | src/api/handler.ts:99 | alice | Add rate limiting | failed | true | spec | invalid | — |
+| 4 | src/legacy/foo.ts:10 | bot | Unclear overflow note | insufficient | unknown | n/a | invalid | — |
+
+For **insufficient** rows, add a **Need from user** line under the table (from `evidence.missing`), e.g. `4: which commit / expected behavior?`.
+
+When showing `valid-fix` rows, optionally expand the **fix contract** (acceptance + out_of_scope) so the user can edit before Phase 2.
 
 Then present the **Review-level feedback** section (summary comments
 without line references, fetched in Phase 0):
@@ -216,7 +228,7 @@ For each review-level item, ask the user to choose:
 
 - **Ignore** — no action needed (e.g. summary of already-addressed threads)
 - **Reply only** — draft a clarification in Phase 3, no code change
-- **Needs code change** — convert to an Implementation task: `path: <overall PR>`, no line, `summary: <review body>`, `affected_files: <user-specified or all PR files>`, `suggested_fix: <user describes>`. Dispatch in Phase 2.
+- **Needs code change** — convert to an Implementation task: `path: <overall PR>`, no line, `summary: <review body>`, `affected_files: <user-specified or all PR files>`, `suggested_fix: <user describes>`, plus user-supplied `acceptance` (2–4) and `out_of_scope`. Dispatch in Phase 2.
 
 User can adjust thread verdicts or skip threads. Proceed with confirmed plan.
 
@@ -236,7 +248,7 @@ User can adjust thread verdicts or skip threads. Proceed with confirmed plan.
 
 ### Dispatch
 
-For each `valid-fix` thread, dispatch the Implementation Agent with this task data:
+For each `valid-fix` thread, dispatch the Implementation Agent with this task data (pass through the triage **fix contract**):
 
 ```
 thread_id: <comment ID>
@@ -244,10 +256,18 @@ path: <file:line>
 reviewer: <name>
 summary: <what the reviewer wants>
 verdict: valid-fix
+claim_check: confirmed
+evidence:
+  code_path: <from triage>
+  in_pr_diff: true | false | unknown
 affected_files:
   - <file1>
   - <file2>
-suggested_fix: <what to change>
+suggested_fix: <behavioral what-to-change>
+acceptance:
+  - <checkable criterion>
+out_of_scope:
+  - <explicit non-goal>
 prior_changes: <list of previous fixes in this PR, if any>
 ```
 
@@ -348,6 +368,14 @@ Examples:
 >
 > Good (中文): "能理解你担心这里 count 溢出，但进入循环前 `items` 已在 15 行被 `MAX_ITEMS` 截断，`i` 始终远小于 `Number.MAX_SAFE_INTEGER`。"
 
+### Out-of-PR stock phrases
+
+When triage has `evidence.in_pr_diff: false` and verdict is `valid-nofix` (or invalid out-of-scope for this PR), prefer a short scope-boundary reply:
+
+> Good (EN): "Agreed this is worth tracking, but it's outside this PR's diff — happy to take it in a follow-up."
+>
+> Good (中文): 「同意值得跟进，但不在本 PR diff 内；建议单独开 issue / 后续 PR。」
+
 ### Reply guidelines
 
 - Match the reviewer's language (Chinese reviewer → Chinese reply)
@@ -355,15 +383,27 @@ Examples:
 - Be concise: 1-3 sentences ideal
 - Don't over-explain — reviewer is a peer, trust they understand code
 - Never be defensive — state facts, acknowledge intent
+- **Ground-truth diff**: describe what `git diff origin/{branch}...HEAD` actually changed, not the planned fix
+
+### AI-assisted footer (default on)
+
+Unless the user disables it for this run, append the following footer to every reply body that will be posted (after the human-facing sentences):
+
+```markdown
+> _(AI-assisted reply — approved in pr-review-handler checkpoint)_
+```
+
+Checkpoint 2 may strip the footer per reply or for all replies. Do not present the footer as if a human typed it without the marker.
 
 ### Checkpoint 2: User review
 
-Present all reply drafts. User can:
+Present all reply drafts (with footer visible if enabled). User can:
 
 - Approve all
 - Edit individual replies
 - Reject specific replies
 - Add context to replies
+- Strip or keep the AI-assisted footer
 
 ## Phase 4: Post & Push
 
@@ -431,9 +471,12 @@ Output final summary:
 ✅ Triage: N/N threads processed
 ✅ Fixes: M/K valid-fix threads applied (committed locally, pushed)
    ❌ Failed: {thread} — {reason}
+   ⚠️ regression-gap: {thread} — behavior change noted, no test in concerns (if any)
 ✅ Replies: P/P threads drafted and posted
 ✅ Resolved: Q/P conversations resolved (R skipped — already resolved)
 ```
+
+If an Implementation Agent listed `regression-gap` in `concerns`, surface it here. Do **not** force adding tests mid-pipeline unless the user asks.
 
 ## Pipeline Failure Rules
 
@@ -459,5 +502,9 @@ Output final summary:
 
 These apply across all agents and phases:
 
+- **Claim must be confirmed with code_path.** `valid-fix` requires `claim_check: confirmed` and a non-empty `evidence.code_path`. No evidence, no fix.
+- **Fix contract bounds the change.** Implementation satisfies `acceptance` only and never implements `out_of_scope`. Minimal fix, not drive-by refactor.
 - **Trace all references after removals.** Deleting a function, type field, or import creates orphans in callers, tests, and type usages. Search the entire codebase for the symbol. This is the #1 cause of "fixed the review but broke the build."
-- **Don't guess on ambiguous threads.** If a concern is partially valid or unclear, mark for user decision in Checkpoint 1. A wrong reply is worse than no reply.
+- **Don't guess on ambiguous threads.** If a concern is partially valid or unclear, set `claim_check: insufficient` and mark for user decision in Checkpoint 1. A wrong reply is worse than no reply.
+- **AI reply transparency.** Posted replies are human-approved at Checkpoint 2 but should keep the AI-assisted footer unless the user strips it — do not impersonate an unassisted human author.
+- **Checkpoints are gates.** Never skip Checkpoint 1 or 2 to "save time." Silent promotion of verdicts or replies is a process failure.

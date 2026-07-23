@@ -60,20 +60,22 @@ Identifies the target PR from the current branch or an explicit PR link, fetches
 
 ### Phase 1: Triage
 
-Reads the referenced code and each review thread, then classifies every comment as:
+Reads code, PR diff context, and each review thread; **verifies the claim** (`confirmed` / `failed` / `insufficient` + `code_path` / `in_pr_diff`); classifies as:
 
-- `valid-fix` — a real issue that requires code changes
-- `valid-nofix` — the concern is valid, but no code change is needed
-- `invalid` — the premise doesn't apply to current code, or the suggested fix would be harmful
+- `valid-fix` — claim confirmed with `code_path`; needs code change (includes **fix contract**: acceptance + out_of_scope)
+- `valid-nofix` — merit, but no code change on this PR
+- `invalid` — claim failed, already handled, or harmful fix
+
+`valid-fix` is gated on confirmed + code_path. Unclear → `insufficient` + Need from user at Checkpoint 1.
 
 On Pi with pi-subagents, triage runs in parallel via `pr-review-handler.triage` project agents. On other harnesses (Claude Code Task tool, Cursor background agent), runs via the harness's subtask mechanism. Falls back to inline if no subtask mechanism.
 
 > [!TIP]
-> Triage is intentionally conservative. If a comment is unclear, mark it `invalid` with the reason `unclear — needs human review`.
+> Triage is intentionally conservative. If a comment is unclear, set `claim_check: insufficient` and `invalid` with reason `unclear — needs human review`.
 
 ### Phase 2: Fix
 
-For each `valid-fix` thread, a specialized implementation agent applies the smallest possible change that satisfies the review. The agent traces references first, updates callers and tests when signatures change, and avoids unrelated cleanup or refactors.
+For each `valid-fix` thread, the implementation agent applies a **minimal fix** against the triage fix contract (acceptance only; never out_of_scope). Traces references first; updates callers/tests on signature changes.
 
 All fixes are committed as a single commit, but **never pushed** during this phase.
 
@@ -88,7 +90,7 @@ The orchestrator drafts one reply per thread based on:
 - Actual diff: `git diff origin/{branch}...HEAD`
 - Failure records from Phase 2
 
-Replies are matched to the reviewer's language and tone, kept concise, and never defensive.
+Replies match language/tone, stay concise, never defensive. Default **AI-assisted** footer (strippable at Checkpoint 2). Out-of-PR nits use a stock scope phrase.
 
 ### Phase 4: Post & Push
 

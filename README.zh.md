@@ -116,23 +116,34 @@ review 级别的整体反馈。本阶段只做数据准备，不修改代码。
 
 ### Phase 1: Triage
 
-读取评论所指代码和完整 review 线程后，逐条将评论分类为：
+读取评论所指代码、PR diff 上下文和完整 review 线程后，先 **验证评论者的 claim**，再分类为：
 
-- `valid-fix` — 存在真实问题，需要代码修改
-- `valid-nofix` — 问题成立，但不需要改代码
-- `invalid` — 前提不适用于当前代码，或建议的修复反而有害
+- `valid-fix` — claim 已 **confirmed** 且有具体 `code_path`，需要改代码
+- `valid-nofix` — claim 有道理，但本 PR 不改代码
+- `invalid` — claim 不成立、已被处理，或建议修复有害
+
+每条结论还带 Checkpoint 1 用的证据字段：
+
+| 字段 | 作用 |
+| --- | --- |
+| `claim_check` | `confirmed` \| `failed` \| `insufficient` |
+| `evidence.code_path` | 证实 claim 的符号/控制流（`valid-fix` 必填） |
+| `evidence.in_pr_diff` | 问题是否落在本 PR diff 内 |
+| `axis` | `standards` \| `spec` \| `both` \| `n/a` |
+| **fix contract**（仅 valid-fix） | `suggested_fix` + `acceptance`（2–4 条可验收项）+ `out_of_scope` |
+
+`valid-fix` 有门闩：未 confirmed 或缺少 code_path → 不自动进入修复。含义不清时用 `claim_check: insufficient`，在 Checkpoint 1 展示 **Need from user**。
 
 在 Pi 且装有 pi-subagents 时，Triage 通过 `pr-review-handler.triage` project agent 并行执行；其他平台用各自子任务机制；无子任务机制则内联。
 
 > [!TIP]
-> Triage 默认偏保守。如果某条评论含义不清，可直接标记为 `invalid`，原因写
+> Triage 默认偏保守。含义不清时设 `claim_check: insufficient`，`verdict: invalid`，原因写
 > `unclear — needs human review`。
 
 ### Phase 2: Fix
 
-对每条 `valid-fix` 线程，由专门的 implementation agent 施加满足 review 要求的
-最小改动。修改前先追踪引用关系；如果改动影响函数签名、类型或导出，会同步更新
-调用方和测试；不顺手做无关的重构或清理。
+对每条 `valid-fix` 线程，implementation agent 按 triage 的 **fix contract**
+（acceptance 清单 + out_of_scope）做 **minimal fix**。修改前先追踪引用；签名/类型变更时同步调用方与测试；不实现 out_of_scope，不顺手重构。
 
 本阶段所有修复都会提交到本地，但 **不会推送**。
 
@@ -147,7 +158,7 @@ review 级别的整体反馈。本阶段只做数据准备，不修改代码。
 - 实际变更：`git diff origin/{branch}...HEAD`
 - Phase 2 中的失败记录
 
-回复会尽量匹配评论者的语言和语气，保持简洁，避免防御性措辞。
+回复会尽量匹配评论者的语言和语气，保持简洁，避免防御性措辞。默认附带简短 **AI-assisted** 页脚（Checkpoint 2 可去掉）。不在本 PR diff 内的 nit 使用固定的范围说明话术。
 
 ### Phase 4: Post & Push
 
