@@ -122,6 +122,15 @@ If `valid-fix`, list ALL files that would need changes:
 
 This list and contract drive the Implementation Agent's scope — missing a file or a vague contract means the fix will be incomplete or oversized.
 
+Also report dependency evidence for the orchestrator's cross-thread scheduler:
+
+- `modified_symbols`: every function, type, export, configuration key, or test helper this fix changes; use qualified names when possible.
+- `referenced_symbols`: imports, types, call targets, and symbols this fix depends on or whose callers/tests it changes.
+- `change_kinds`: one or more of `implementation`, `type`, `export`, `caller`, `test`, `config`, or `unknown`.
+- `dependency_risks`: dynamic behavior, generated code, shared mutable configuration, or incomplete reference evidence that makes isolation unsafe.
+
+Do not claim two fixes are independent; comparison happens only after all triage verdicts are collected. Record uncertainty in `dependency_risks`.
+
 ## Output
 
 Output ONLY this YAML block — no prose, no JSON, no other text before or after:
@@ -148,9 +157,17 @@ acceptance:
   - <checkable criterion>
 out_of_scope:
   - <explicit non-goal>
+modified_symbols:
+  - <qualified symbol, type, export, config key, or test helper changed>
+referenced_symbols:
+  - <qualified symbol, type, import, or call target depended on>
+change_kinds:
+  - implementation | type | export | caller | test | config | unknown
+dependency_risks:
+  - <dynamic behavior, missing evidence, or empty if none>
 ```
 
-When not `valid-fix`, set `affected_files: []`, `suggested_fix: ""`, `acceptance: []`, `out_of_scope: []`.
+When not `valid-fix`, set `affected_files: []`, `suggested_fix: ""`, `acceptance: []`, `out_of_scope: []`, `modified_symbols: []`, `referenced_symbols: []`, `change_kinds: []`, and `dependency_risks: []`.
 
 ## Constraints
 
@@ -158,5 +175,6 @@ When not `valid-fix`, set `affected_files: []`, `suggested_fix: ""`, `acceptance
 - **No verification commands**: do not run `tsc`, `npm run build`, `npm test`, or any build/lint command. The orchestrator handles verification after all fixes.
 - **No guesses**: if you cannot determine validity, set `claim_check: insufficient` and `verdict: invalid` with reason `"unclear — needs human review"` plus `evidence.missing`. Do not invent `valid-fix`.
 - **valid-fix gate**: confirmed + non-empty `evidence.code_path` + non-empty `acceptance` (2–4 items)
-- **Be thorough on affected_files**: this list determines what the Implementation Agent is allowed to touch
+- **Be thorough on affected_files and symbols**: they determine implementation scope, repair order, and whether isolated parallel execution is safe
+- **No invented symbols**: report only symbols verified from code, diff, or reference search; use `dependency_risks` when evidence is incomplete
 - **One thread at a time**: you are dispatched for a single thread, not batch

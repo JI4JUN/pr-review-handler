@@ -48,7 +48,8 @@ The handler runs a multi-phase pipeline. Each phase has a clear responsibility, 
 ```
 Phase 0: Setup
 Phase 1: Triage        ← parallel, read-only
-Phase 2: Fix           ← serial, minimal changes
+Phase 1.5: Dependencies ← build repair dependency graph
+Phase 2: Fix           ← serial for dependencies; isolated parallel for proven-independent groups
 Phase 3: Reply         ← orchestrator drafts inline
 Phase 4: Post & Push
 Phase 5: Report
@@ -73,11 +74,15 @@ On Pi with pi-subagents, triage runs in parallel via `pr-review-handler.triage` 
 > [!TIP]
 > Triage is intentionally conservative. If a comment is unclear, set `claim_check: insufficient` and `invalid` with reason `unclear — needs human review`.
 
+### Phase 1.5: Repair dependencies
+
+After confirmation, orchestrator compares affected files, modified/referenced symbols, change kinds, call chains, and uncertainty. Any overlap or relation not proven independent becomes a dependency.
+
 ### Phase 2: Fix
 
-For each `valid-fix` thread, the implementation agent applies a **minimal fix** against the triage fix contract (acceptance only; never out_of_scope). Traces references first; updates callers/tests on signature changes.
+Dependent repairs run serially in graph order. Only proven-independent groups run concurrently in isolated clean Git worktrees; patches integrate before later waves. Setup failure, conflict, or discovered overlap falls back to serial execution. Each implementation agent follows fix contract and makes only minimal accepted change.
 
-All fixes are committed as a single commit, but **never pushed** during this phase.
+All integrated fixes are committed as a single commit, but **never pushed** during this phase.
 
 After all fixes, the pipeline runs the project's type checker or equivalent verification (auto-detected: `tsc` for TypeScript, `ruff`/`mypy` for Python, `go build` for Go, `cargo check` for Rust, etc.). If it fails, the pipeline does `git reset --soft` to unstage the commit, fixes the issue, and recommits before continuing.
 
@@ -136,7 +141,7 @@ When installed as a skill, invoke it from your agent with natural language. Exam
 | Platform | Support |
 | --- | --- |
 | npm / Node.js | ✅ Install `@trashcodermaker/pr-review-handler` as a published package |
-| Pi | ✅ Install [`@trashcodermaker/pi-pr-review-handler`](https://www.npmjs.com/package/@trashcodermaker/pi-pr-review-handler) via `pi install`. With [`pi-subagents`](https://github.com/nicobailon/pi-subagents), uses `pr-review-handler.triage`/`pr-review-handler.implementation` project agents (auto-created); otherwise inline. |
+| Pi | ✅ Install [`@trashcodermaker/pi-pr-review-handler`](https://www.npmjs.com/package/@trashcodermaker/pi-pr-review-handler) via `pi install`. After `/pi-pr-review-handler-sync`, [`pi-subagents`](https://github.com/nicobailon/pi-subagents) uses `pr-review-handler.triage` / `pr-review-handler.implementation`; otherwise inline. |
 | Claude Code | ✅ Task-based agent dispatch, or `npx skills add JI4JUN/pr-review-handler --skill pr-review-handler` |
 | Cursor | ✅ Background agent dispatch |
 | Gemini CLI / OpenCode / others | ✅ Native subtask mechanism, or inline fallback |

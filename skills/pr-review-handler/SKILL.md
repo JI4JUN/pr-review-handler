@@ -19,8 +19,8 @@ description: >
 Orchestrate specialized agents to process PR review comments:
 
 ```
-Phase 0: Setup → Phase 1: Triage (parallel) → Phase 2: Fix (serial)
-         → Phase 3: Reply → Phase 4: Post & Push → Phase 5: Report
+Phase 0: Setup → Phase 1: Triage (parallel) → Phase 1.5: Repair dependencies
+         → Phase 2: Fix (dependency-aware) → Phase 3: Reply → Phase 4: Post & Push → Phase 5: Report
 ```
 
 Checkpoints: after Phase 1 (user confirms verdicts) and after Phase 3 (user approves replies).
@@ -32,7 +32,7 @@ Checkpoints: after Phase 1 (user confirms verdicts) and after Phase 3 (user appr
 | Role | Responsibility | Parallelizable |
 |------|---------------|----------------|
 | Triage Agent | Verify each review **claim** (evidence + verdict), emit fix contract when needed | ✅ Yes (read-only) |
-| Implementation Agent | Apply **minimal fix** for one thread against the fix contract | ❌ No (writes files) |
+| Implementation Agent | Apply **minimal fix** against fix contract | ⚠️ Isolated worktree required only for parallel groups |
 | Reply drafting | Orchestrator drafts inline (no separate agent) | N/A |
 
 ### Platform mapping
@@ -41,15 +41,15 @@ Agent specs live in `agents/` relative to this skill (`agents/triage-agent.md`, 
 
 | Platform | Dispatch mechanism |
 |----------|-------------------|
-| Pi | `pr-review-handler.triage` / `pr-review-handler.implementation` project agents via `subagent` tool (auto-created in Phase 0), else inline |
+| Pi | Synced `pr-review-handler.triage` / `pr-review-handler.implementation` agents via `subagent`, else inline |
 | Claude Code | Task tool |
 | Cursor | background agent |
 | Gemini CLI / OpenCode / others | native subtask mechanism if available |
 | No subtask available | inline (read the spec, execute the steps yourself) |
 
-**Dispatch pattern**: read the relevant agent spec, embed its instructions into the task prompt along with the thread-specific input data (thread info for triage, verdict data for implementation), and launch one subtask per thread. Triage is read-only so subtasks run in parallel; implementation writes files so it runs serially.
+**Dispatch pattern**: read relevant agent spec and dispatch one triage task per thread in parallel. After triage, orchestrator builds repair dependency graph: dependent repairs serial; only proven-independent groups parallel in isolated Git worktrees.
 
-**Pi dispatch**: Pi uses the `subagent` tool (from the optional `pi-subagents` package) with project-level agents registered in `.agents/pr-review-handler/`. Phase 0 auto-creates these from templates shipped in the skill package. Once registered, dispatch with agent name `pr-review-handler.triage` (Phase 1) or `pr-review-handler.implementation` (Phase 2) — the task prompt contains only the input data, since the agent carries its own system prompt. If `pi-subagents` is not installed (no `subagent` tool), fall back to inline execution.
+**Pi dispatch**: Pi uses optional `subagent` tool with project agents in `.agents/pr-review-handler/`. User runs `/pi-pr-review-handler-sync` before dispatch. Use `pr-review-handler.triage` for Phase 1 and `pr-review-handler.implementation` for Phase 2. If project agents or tool unavailable, fall back inline.
 
 **Inline fallback**: if no `subagent` tool (Pi) or no subtask mechanism (other platforms), read each spec and execute its steps yourself, one thread at a time.
 
@@ -238,19 +238,26 @@ User can adjust thread verdicts or skip threads. Proceed with confirmed plan.
 - **All valid-nofix**: skip Phase 2, go to Phase 3
 - **User rejects all**: end workflow
 
-## Phase 2: Implementation (serial dispatch)
+## Phase 1.5: Repair dependency analysis
 
-### Fix ordering
+Run only after user confirms `valid-fix` verdicts and before implementation writes code. Build a directed repair graph with one node per confirmed fix. This step is orchestrator-owned.
 
-1. **User-specified order** from Phase 1 confirmation
-2. **Otherwise dependency-first**: types → implementation → callers → tests
-3. **Same level**: PR order
+For every pair, compare `affected_files`, `modified_symbols`, `referenced_symbols`, `change_kinds`, and `dependency_risks`. Add `A → B` when A must integrate before B. Orient relations by: user order; type/export/config producer before consumer; callee/provider before caller/consumer; then PR order.
 
-### Dispatch
+Treat repairs as dependent when files or modified symbols overlap; one changes a symbol another references; type/export/config/generated artifacts are consumed; reference search/CodeGraph finds a call, import, inheritance, helper, or configuration edge; or uncertainty exists. **Cannot prove independent means serial.**
 
-For each `valid-fix` thread, dispatch the Implementation Agent with this task data (pass through the triage **fix contract**):
+Topologically sort graph. Each fix starts as its own group; only cycles or undirected relations become multi-fix serial groups. Groups with all predecessors integrated form a wave. Show the resulting wave/group/mode/reason plan with Checkpoint 1.
 
-```
+- Dependent repairs run serially in graph order.
+- A wave with independent groups may run in parallel only when every group has no unresolved risk and each gets an isolated clean Git worktree.
+- Multiple fixes inside a parallel group remain serial in its persistent worktree.
+- Dirty worktree, unavailable worktree support, setup failure, integration conflict, or discovered overlap disables parallelism for affected work and falls back to serial execution.
+
+## Phase 2: Implementation (dependency-aware dispatch)
+
+For every fix, dispatch the Implementation Agent with its triage fix contract plus:
+
+```yaml
 thread_id: <comment ID>
 path: <file:line>
 reviewer: <name>
@@ -260,32 +267,54 @@ claim_check: confirmed
 evidence:
   code_path: <from triage>
   in_pr_diff: true | false | unknown
-affected_files:
-  - <file1>
-  - <file2>
+affected_files: [<file>]
+modified_symbols: [<symbol>]
+referenced_symbols: [<symbol>]
+change_kinds: [implementation | type | export | caller | test | config | unknown]
+dependency_risks: [<risk or empty>]
 suggested_fix: <behavioral what-to-change>
-acceptance:
-  - <checkable criterion>
-out_of_scope:
-  - <explicit non-goal>
-prior_changes: <list of previous fixes in this PR, if any>
+acceptance: [<checkable criterion>]
+out_of_scope: [<explicit non-goal>]
+execution_mode: serial | isolated-parallel
+predecessor_changes:
+  - <completed prerequisite thread ID, files, symbols, and summary>
+parallel_group: <group ID, only for isolated-parallel>
+candidate_repairs:
+  - thread_id: <other approved, incomplete repair>
+    affected_files: [<path>]
+    modified_symbols: [<symbol>]
+    referenced_symbols: [<symbol>]
 ```
 
-Embed the Implementation Agent spec (`agents/implementation-agent.md`) into the task prompt so the subtask has the full role instructions, then append the verdict data above.
+`candidate_repairs` contains other incomplete approved repairs; omit completed predecessors already in `predecessor_changes`. On Pi, task prompt contains input only; other platforms embed implementation spec.
 
-**Pi dispatch**: Use `pr-review-handler.implementation` project agent, SINGLE mode — one subtask per fix, awaited in turn (serial). Pass `acceptance: { level: "none", reason: "review fixes are often small and add no tests; the implementation agent runs no commands by design; the orchestrator runs its own project-type-detected verification after all fixes" }`. Task prompt = verdict data ONLY. Pass `prior_changes` by collecting each completed subtask's output and appending it to the next subtask's input.
+### Serial and isolated groups
 
-- **Why `level: "none"`**: the implementation task contains "fix", so pi-subagents infers `checked`, which requires non-empty `tests-added` + `commands-run` evidence. Review fixes usually add no tests and the agent runs no commands (no tsc/lint — the orchestrator does), so `checked` always rejects. `acceptance: "attested"` does NOT work — an explicit level cannot lower below the inferred `checked`; only `{ level: "none", reason }` disables the gate.
+For serial groups, use main worktree and run one task at a time. Append completed reports as `predecessor_changes`. If agent reports `dependency_findings`, recompute remaining graph before next dispatch.
 
-**Other platforms**: embed `agents/implementation-agent.md` spec into the task prompt + verdict data, dispatch via your subtask tool (serial).
+Parallel groups must not share cwd. At Phase 2 start require empty `git status --porcelain` and record `REPAIR_BASE=$(git rev-parse HEAD)`. Create one persistent Git worktree per group from same integrated checkpoint. Launch currently ready fix per group in parallel with that group's cwd; later same-group fixes start only after predecessor finish. Implementation agents never commit, rebase, merge, reset, cherry-pick, or push.
 
-**No subtask mechanism**: execute the Implementation Agent spec inline, one thread at a time.
+Use `acceptance: { level: "none", reason: "implementation agents do not run verification and review fixes may add no tests; orchestrator owns isolated-worktree integration and final validation" }` for Pi agents. For other platforms, collect each group patch after `git add -N` for new files so `git diff --binary <base>` includes them. No subtask mechanism: execute serially in one worktree.
+
+### Wave checkpoints and fallback
+
+Before every wave record `WAVE_BASE=$(git rev-parse HEAD)`. After every successful wave that changed files, stage and checkpoint it:
+
+```bash
+git add -A
+git commit -m "chore(review): temporary repair checkpoint"
+```
+
+For parallel wave: inspect reports/patches; integrate stable group order; if conflict or overlap appears, run `git reset --hard "$WAVE_BASE" && git clean -fd`, discard entire wave's patches/worktrees, recompute graph, then rerun every group in that wave serially from `WAVE_BASE`. Never rerun atop partial patch or force apply. After success checkpoint, record predecessor changes, and remove temporary worktrees. Empty wave creates no checkpoint.
+
+- **Why `level: "none"`**: implementation task text includes “fix”; pi-subagents otherwise infers `checked`, requiring evidence intentionally absent from implementation agents.
 
 ### After all fixes
 
-Once all Implementation Agents have completed, commit all changes as one:
+Once all Implementation Agents have completed, squash orchestrator-owned temporary checkpoints back to Phase 2 start, then create one final commit:
 
 ```bash
+git reset --soft "$REPAIR_BASE"
 git add -A
 git commit -m "fix(review): address {N} review threads"
 ```

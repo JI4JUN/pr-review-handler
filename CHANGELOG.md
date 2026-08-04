@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.5.0
+
+### Dependency-aware repair orchestration
+
+- Added Phase 1.5 repair dependency analysis after triage confirmation.
+- Triage now emits modified/referenced symbols, change kinds, and dependency risks for every `valid-fix`.
+- Dependent or uncertain repairs run serially in graph order; only proven-independent groups run in isolated Git worktrees.
+- Parallel worktree repairs use wave checkpoints, deterministic patch integration, full-wave rollback, and serial fallback on conflicts or newly discovered overlap.
+- Implementation agents receive predecessor context and candidate repair manifests, then report structured dependency findings.
+- Final repair history still squashes temporary checkpoints into one `fix(review)` commit.
+- Synced Pi-agent guidance and all root/package READMEs; Pi projects use `/pi-pr-review-handler-sync` rather than Phase 0 auto-creation.
+
 ## 1.4.0
 
 ### Claim verification and fix contract

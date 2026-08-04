@@ -53,13 +53,13 @@ node_modules/@trashcodermaker/pi-pr-review-handler/
 
 ### pi-subagents (recommended)
 
-Pi has no native subtask mechanism. With [`pi-subagents`](https://github.com/nicobailon/pi-subagents) installed, the skill auto-creates project agents and dispatches them via the `subagent` tool (parallel triage, serial implementation). Without it, runs inline.
+Pi has no native subtask mechanism. With [`pi-subagents`](https://github.com/nicobailon/pi-subagents) installed and project agents synced, skill dispatches parallel triage and dependency-aware implementation through `subagent`. Without it, runs inline.
 
 ```bash
 pi install npm:pi-subagents
 ```
 
-The skill auto-creates project agents (`pr-review-handler.triage`, `pr-review-handler.implementation`) in Phase 0 and dispatches them via the `subagent` tool.
+Run `/pi-pr-review-handler-sync` after install or upgrade. Skill then dispatches synced project agents (`pr-review-handler.triage`, `pr-review-handler.implementation`) through `subagent`.
 
 ### CodeGraph (optional, enhances agent quality)
 
@@ -76,7 +76,8 @@ The handler runs a multi-phase pipeline. Each phase has a clear responsibility, 
 ```
 Phase 0: Setup
 Phase 1: Triage        ← parallel, read-only
-Phase 2: Fix           ← serial, minimal changes
+Phase 1.5: Dependencies ← build repair dependency graph
+Phase 2: Fix           ← serial for dependencies; isolated parallel for proven-independent groups
 Phase 3: Reply         ← orchestrator drafts inline
 Phase 4: Post & Push
 Phase 5: Report
@@ -101,11 +102,15 @@ With [`pi-subagents`](https://github.com/nicobailon/pi-subagents) installed, tri
 > [!TIP]
 > Triage is intentionally conservative. If a comment is unclear, set `claim_check: insufficient` and `invalid` with reason `unclear — needs human review`.
 
+### Phase 1.5: Repair dependencies
+
+After confirmation, orchestrator compares affected files, modified/referenced symbols, change kinds, call chains, and uncertainty. Any overlap or relation not proven independent becomes a dependency.
+
 ### Phase 2: Fix
 
-For each `valid-fix` thread, the implementation agent applies a **minimal fix** against the triage fix contract (acceptance only; never out_of_scope). Traces references first; updates callers/tests on signature changes.
+Dependent repairs run serially in graph order. Only proven-independent groups run concurrently in isolated clean Git worktrees; patches integrate before later waves. Setup failure, conflict, or discovered overlap falls back to serial execution. Each implementation agent follows fix contract and makes only minimal accepted change.
 
-All fixes are committed as a single commit, but **never pushed** during this phase.
+All integrated fixes are committed as a single commit, but **never pushed** during this phase.
 
 After all fixes, the pipeline runs the project's type checker or equivalent verification (auto-detected: `tsc` for TypeScript, `ruff`/`mypy` for Python, `go build` for Go, `cargo check` for Rust, etc.). If it fails, the pipeline does `git reset --soft` to unstage the commit, fixes the issue, and recommits before continuing.
 
@@ -169,7 +174,7 @@ Or trigger the skill directly:
 
 | Platform | Support |
 | --- | --- |
-| Pi | ✅ This package. Uses `pr-review-handler.triage` / `pr-review-handler.implementation` project agents via [`pi-subagents`](https://github.com/nicobailon/pi-subagents) (auto-created in Phase 0); inline fallback if not installed. |
+| Pi | ✅ This package. After `/pi-pr-review-handler-sync`, uses `pr-review-handler.triage` / `pr-review-handler.implementation` via [`pi-subagents`](https://github.com/nicobailon/pi-subagents); inline fallback if unavailable. |
 | Other harnesses (Claude Code, Cursor, Gemini CLI, OpenCode, …) | ✅ Use [`@trashcodermaker/pr-review-handler`](https://www.npmjs.com/package/@trashcodermaker/pr-review-handler) instead |
 
 ## License

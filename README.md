@@ -117,7 +117,8 @@ requested.
 ```
 Phase 0: Setup
 Phase 1: Triage        ← parallel, read-only
-Phase 2: Fix           ← serial, minimal changes
+Phase 1.5: Dependencies ← build repair dependency graph
+Phase 2: Fix           ← serial for dependencies; isolated parallel for proven-independent groups
 Phase 3: Reply         ← orchestrator drafts inline
 Phase 4: Post & Push
 Phase 5: Report
@@ -156,15 +157,15 @@ On Pi with pi-subagents, triage runs in parallel via `pr-review-handler.triage` 
 > Triage is intentionally conservative. If a comment is unclear, set
 > `claim_check: insufficient` and `invalid` with reason `unclear — needs human review`.
 
+### Phase 1.5: Repair dependencies
+
+After confirmation, orchestrator compares each fix contract's affected files, modified/referenced symbols, change kinds, call chains, and uncertainty. Any overlap or relation not proven independent becomes a dependency.
+
 ### Phase 2: Fix
 
-For each `valid-fix` thread, a specialized implementation agent applies a
-**minimal fix** against the triage **fix contract** (acceptance checklist +
-out_of_scope). The agent traces references first, updates callers and tests
-when signatures change, and never implements out-of-scope items or drive-by
-refactors.
+Dependent repairs run serially in graph order. Only proven-independent groups run concurrently, each in isolated clean Git worktree; patches are inspected and integrated before later waves. Setup failure, patch conflict, or newly discovered overlap falls back to serial execution. Each implementation agent still follows triage fix contract and applies only minimal accepted change.
 
-All fixes are committed as a single commit, but **never pushed** during this phase.
+All integrated fixes are committed as a single commit, but **never pushed** during this phase.
 
 After all fixes, the pipeline runs the project's type checker or equivalent verification (auto-detected: `tsc` for TypeScript, `ruff`/`mypy` for Python, `go build` for Go, `cargo check` for Rust, etc.). If it fails, the pipeline does `git reset --soft` to unstage the commit, fixes the issue, and recommits before continuing.
 

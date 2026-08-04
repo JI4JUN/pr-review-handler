@@ -48,12 +48,21 @@ out_of_scope:
 
 If `acceptance` is missing or empty, derive 2–4 checkable criteria from `summary` + `suggested_fix` before editing, and list them in your output under `acceptance_used`. Prefer failing with `recommended_next_step: needs human decision` over inventing a large redesign.
 
-You may also receive context from prior fixes in the same PR:
+You may also receive dependency-scheduling context:
 
+```yaml
+execution_mode: serial | isolated-parallel
+predecessor_changes:
+  - <thread_id>: <file and symbol changes already integrated before this fix>
+parallel_group: <independent group ID, only for isolated-parallel>
+candidate_repairs:
+  - thread_id: <other approved, incomplete repair>
+    affected_files: [<path>]
+    modified_symbols: [<symbol>]
+    referenced_symbols: [<symbol>]
 ```
-prior_changes:
-  - <file>: <what was changed and why>
-```
+
+`serial` means predecessor changes are present in this worktree. `isolated-parallel` runs in a temporary Git worktree and cannot assume other parallel changes. Compare discoveries with `candidate_repairs`.
 
 ## Steps
 
@@ -61,7 +70,9 @@ prior_changes:
 
 Open every file in `affected_files`. Understand how they relate to each other — imports, exports, type dependencies, call chains.
 
-If `prior_changes` is provided, pay special attention to files that were already modified by previous fixes in this PR. Your changes must be compatible with those prior changes.
+If `predecessor_changes` is provided, pay special attention to files and symbols already changed by prerequisite repairs. Your changes must be compatible with those changes.
+
+For `isolated-parallel`, do not use `git commit`, `git rebase`, `git merge`, `git cherry-pick`, `git reset`, or `git push`. The orchestrator owns patch collection and integration. Report new overlaps in `dependency_findings`.
 
 ### 2. Trace references
 
@@ -143,16 +154,22 @@ validation:
   completeness: <each acceptance item met? yes/no + note>
   correctness: <any syntax/broken-reference issues? yes/no + note>
   coherence: <patterns/conventions/OOS respected? yes/no + note>
+dependency_findings:
+  - thread_id: <candidate repair ID, or unknown>
+    files: [<overlapping/discovered path>]
+    symbols: [<overlapping/discovered symbol>]
+    reason: <why serial ordering or graph recomputation is required>
 concerns: <unmet acceptance, OOS pressure, callers outside affected_files, regression-gap, or empty>
-recommended_next_step: <commit / run verification / needs human decision on X>
+recommended_next_step: <integrate patch / continue serial group / recompute dependency graph / run verification / needs human decision on X>
 ```
 
 ## Constraints
 
 - **Scope**: only modify files listed in `affected_files`. If you discover a file that needs changes but isn't listed, report it in `concerns` rather than modifying it
 - **Fix contract**: complete `acceptance`; never implement `out_of_scope`
-- **No commits**: the orchestrator commits after your changes
-- **No type checks**: the orchestrator runs the project's type checker/verification after all fixes are applied
+- **No commits or Git integration**: orchestrator collects isolated-worktree patches, integrates them, and creates final commit
+- **No type checks**: orchestrator runs project verification after all fixes are integrated
 - **No pushes**: never run `git push`
 - **Minimal fix**: the smallest diff that satisfies acceptance
+- **Report dependency drift**: if reference tracing reveals overlap with approved repair, stop before broadening scope and report candidate thread IDs/files/symbols in `dependency_findings`; do not decide repairs are independent
 - **Escalate, don't decide**: if the fix requires a product, architecture, or scope decision not covered by the fix contract (e.g., "should we change the public API?", "which of two valid approaches?"), do NOT make the decision yourself. Stop, leave the code unchanged for that part, and report it in `concerns` with `recommended_next_step: needs human decision on <question>`. The orchestrator/user decides.

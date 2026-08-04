@@ -103,7 +103,8 @@ checkpoint 暂停执行。
 ```
 Phase 0: Setup
 Phase 1: Triage        ← 并行，只读
-Phase 2: Fix           ← 串行，最小修改
+Phase 1.5: Dependencies ← 构建修复依赖图
+Phase 2: Fix           ← 有依赖则串行；已证实独立的组隔离并行
 Phase 3: Reply         ← 由编排器直接起草
 Phase 4: Post & Push
 Phase 5: Report
@@ -140,12 +141,15 @@ review 级别的整体反馈。本阶段只做数据准备，不修改代码。
 > Triage 默认偏保守。含义不清时设 `claim_check: insufficient`，`verdict: invalid`，原因写
 > `unclear — needs human review`。
 
+### Phase 1.5: 修复依赖
+
+确认后，编排器比较各 fix contract 的受影响文件、修改/引用符号、变更类型、调用链和不确定性。存在重叠或无法证明独立时，按依赖处理。
+
 ### Phase 2: Fix
 
-对每条 `valid-fix` 线程，implementation agent 按 triage 的 **fix contract**
-（acceptance 清单 + out_of_scope）做 **minimal fix**。修改前先追踪引用；签名/类型变更时同步调用方与测试；不实现 out_of_scope，不顺手重构。
+有依赖的修复按图顺序串行。仅已证实独立的修复组可并行，每组使用独立干净 Git worktree；补丁检查、整合后才进入后续波次。worktree 准备失败、补丁冲突或新发现重叠时，回退为串行。implementation agent 仍按 fix contract 做最小且已验收的修改。
 
-本阶段所有修复都会提交到本地，但 **不会推送**。
+全部整合后的修复提交为单个本地 commit，但 **不会推送**。
 
 全部修复完成后，流程会运行项目的类型检查或等效验证（自动检测：TypeScript 用 `tsc`、Python 用 `ruff`/`mypy`、Go 用 `go build`、Rust 用 `cargo check` 等）。如果验证失败，流程会自动定位引入错误的提交，回滚、修复后重新提交，再继续后续阶段。
 
