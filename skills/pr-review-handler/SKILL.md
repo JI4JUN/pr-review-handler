@@ -32,7 +32,7 @@ Checkpoints: after Phase 1 (user confirms verdicts) and after Phase 3 (user appr
 | Role | Responsibility | Parallelizable |
 |------|---------------|----------------|
 | Triage Agent | Verify each review **claim** (evidence + verdict), emit fix contract when needed | ✅ Yes (read-only) |
-| Implementation Agent | Apply **minimal fix** against fix contract | ⚠️ Isolated worktree required only for parallel groups |
+| Implementation Agent | Apply **minimal fix** against fix contract | ⚠️ Parallel only after independence proof; shared cwd |
 | Reply drafting | Orchestrator drafts inline (no separate agent) | N/A |
 
 ### Platform mapping
@@ -47,7 +47,7 @@ Agent specs live in `agents/` relative to this skill (`agents/triage-agent.md`, 
 | Gemini CLI / OpenCode / others | native subtask mechanism if available |
 | No subtask available | inline (read the spec, execute the steps yourself) |
 
-**Dispatch pattern**: read relevant agent spec and dispatch one triage task per thread in parallel. After triage, orchestrator builds repair dependency graph: dependent repairs serial; only proven-independent groups parallel in isolated Git worktrees.
+**Dispatch pattern**: read relevant agent spec and dispatch one triage task per thread in parallel. After triage, orchestrator builds repair dependency graph: dependent repairs serial; only proven-independent fixes parallel in the shared current working directory.
 
 **Pi dispatch**: Pi uses optional `subagent` tool with project agents in `.agents/pr-review-handler/`. User runs `/pi-pr-review-handler-sync` before dispatch. Use `pr-review-handler.triage` for Phase 1 and `pr-review-handler.implementation` for Phase 2. If project agents or tool unavailable, fall back inline.
 
@@ -249,9 +249,9 @@ Treat repairs as dependent when files or modified symbols overlap; one changes a
 Topologically sort graph. Each fix starts as its own group; only cycles or undirected relations become multi-fix serial groups. Groups with all predecessors integrated form a wave. Show the resulting wave/group/mode/reason plan with Checkpoint 1.
 
 - Dependent repairs run serially in graph order.
-- A wave with independent groups may run in parallel only when every group has no unresolved risk and each gets an isolated clean Git worktree.
-- Multiple fixes inside a parallel group remain serial in its persistent worktree.
-- Dirty worktree, unavailable worktree support, setup failure, integration conflict, or discovered overlap disables parallelism for affected work and falls back to serial execution.
+- A wave with independent fixes may run in parallel only when every fix has no unresolved risk and its complete file and symbol sets are disjoint from every other fix in that wave.
+- Parallel fixes share current cwd. They may edit only their own `affected_files`; no agent may run Git write/integration commands while wave is active.
+- A dirty starting tree, overlap, incomplete evidence, or newly discovered dependency disables parallelism for affected work and falls back to serial execution.
 
 ## Phase 2: Implementation (dependency-aware dispatch)
 
@@ -275,10 +275,10 @@ dependency_risks: [<risk or empty>]
 suggested_fix: <behavioral what-to-change>
 acceptance: [<checkable criterion>]
 out_of_scope: [<explicit non-goal>]
-execution_mode: serial | isolated-parallel
+execution_mode: serial | shared-parallel
 predecessor_changes:
   - <completed prerequisite thread ID, files, symbols, and summary>
-parallel_group: <group ID, only for isolated-parallel>
+parallel_wave: <wave ID, only for shared-parallel>
 candidate_repairs:
   - thread_id: <other approved, incomplete repair>
     affected_files: [<path>]
@@ -288,24 +288,24 @@ candidate_repairs:
 
 `candidate_repairs` contains other incomplete approved repairs; omit completed predecessors already in `predecessor_changes`. On Pi, task prompt contains input only; other platforms embed implementation spec.
 
-### Serial and isolated groups
+### Serial and shared-parallel execution
 
-For serial groups, use main worktree and run one task at a time. Append completed reports as `predecessor_changes`. If agent reports `dependency_findings`, recompute remaining graph before next dispatch.
+For serial fixes, use current cwd and run one task at a time. Append completed reports as `predecessor_changes`. If agent reports `dependency_findings`, recompute remaining graph before next dispatch.
 
-Parallel groups must not share cwd. At Phase 2 start require empty `git status --porcelain` and record `REPAIR_BASE=$(git rev-parse HEAD)`. Create one persistent Git worktree per group from same integrated checkpoint. Launch currently ready fix per group in parallel with that group's cwd; later same-group fixes start only after predecessor finish. Implementation agents never commit, rebase, merge, reset, cherry-pick, or push.
+At Phase 2 start require empty `git status --porcelain` and record `REPAIR_BASE=$(git rev-parse HEAD)`. For a shared-parallel wave, launch one implementation task per proven-independent fix in PARALLEL mode with the same cwd. Each task may edit only its declared `affected_files`; it must not run `git add`, `git commit`, `git reset`, `git checkout`, `git clean`, `git rebase`, `git merge`, `git cherry-pick`, or `git push`. Orchestrator alone performs Git operations after all writers finish.
 
-Use `acceptance: { level: "none", reason: "implementation agents do not run verification and review fixes may add no tests; orchestrator owns isolated-worktree integration and final validation" }` for Pi agents. For other platforms, collect each group patch after `git add -N` for new files so `git diff --binary <base>` includes them. No subtask mechanism: execute serially in one worktree.
+Use `acceptance: { level: "none", reason: "implementation agents do not run verification and review fixes may add no tests; orchestrator owns shared-cwd wave coordination and final validation" }` for Pi agents. No subtask mechanism: execute serially in current cwd.
 
 ### Wave checkpoints and fallback
 
-Before every wave record `WAVE_BASE=$(git rev-parse HEAD)`. After every successful wave that changed files, stage and checkpoint it:
+Before every wave record `WAVE_BASE=$(git rev-parse HEAD)`. After every successful wave that changed files, inspect combined `git diff` and agent reports, then stage and checkpoint it:
 
 ```bash
 git add -A
 git commit -m "chore(review): temporary repair checkpoint"
 ```
 
-For parallel wave: inspect reports/patches; integrate stable group order; if conflict or overlap appears, run `git reset --hard "$WAVE_BASE" && git clean -fd`, discard entire wave's patches/worktrees, recompute graph, then rerun every group in that wave serially from `WAVE_BASE`. Never rerun atop partial patch or force apply. After success checkpoint, record predecessor changes, and remove temporary worktrees. Empty wave creates no checkpoint.
+If a shared-parallel wave reports a new dependency, shows any file/symbol overlap, or has an unexpected combined diff, restore the clean pre-wave state with `git reset --hard "$WAVE_BASE" && git clean -fd`, recompute graph, then rerun every fix from that wave serially. Never continue from mixed concurrent edits. Empty wave creates no checkpoint.
 
 - **Why `level: "none"`**: implementation task text includes “fix”; pi-subagents otherwise infers `checked`, requiring evidence intentionally absent from implementation agents.
 

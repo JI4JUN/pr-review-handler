@@ -51,10 +51,10 @@ If `acceptance` is missing or empty, derive 2â€“4 checkable criteria from `summa
 You may also receive dependency-scheduling context:
 
 ```yaml
-execution_mode: serial | isolated-parallel
+execution_mode: serial | shared-parallel
 predecessor_changes:
   - <thread_id>: <file and symbol changes already integrated before this fix>
-parallel_group: <independent group ID, only for isolated-parallel>
+parallel_wave: <wave ID, only for shared-parallel>
 candidate_repairs:
   - thread_id: <other approved, incomplete repair>
     affected_files: [<path>]
@@ -62,7 +62,7 @@ candidate_repairs:
     referenced_symbols: [<symbol>]
 ```
 
-`serial` means predecessor changes are present in this worktree. `isolated-parallel` runs in a temporary Git worktree and cannot assume other parallel changes. Compare discoveries with `candidate_repairs`.
+`serial` means predecessor changes are present in current cwd. `shared-parallel` means independently proven repairs write current cwd concurrently. Compare discoveries with `candidate_repairs`; do not assume another parallel repair's partial change is available.
 
 ## Steps
 
@@ -72,7 +72,7 @@ Open every file in `affected_files`. Understand how they relate to each other â€
 
 If `predecessor_changes` is provided, pay special attention to files and symbols already changed by prerequisite repairs. Your changes must be compatible with those changes.
 
-For `isolated-parallel`, do not use `git commit`, `git rebase`, `git merge`, `git cherry-pick`, `git reset`, or `git push`. The orchestrator owns patch collection and integration. Report new overlaps in `dependency_findings`.
+For `shared-parallel`, edit only declared `affected_files`. Do not run `git add`, `git commit`, `git reset`, `git checkout`, `git clean`, `git rebase`, `git merge`, `git cherry-pick`, or `git push`. Orchestrator owns wave coordination and Git operations. Report new overlaps in `dependency_findings`, then stop before broadening scope.
 
 ### 2. Trace references
 
@@ -167,9 +167,9 @@ recommended_next_step: <integrate patch / continue serial group / recompute depe
 
 - **Scope**: only modify files listed in `affected_files`. If you discover a file that needs changes but isn't listed, report it in `concerns` rather than modifying it
 - **Fix contract**: complete `acceptance`; never implement `out_of_scope`
-- **No commits or Git integration**: orchestrator collects isolated-worktree patches, integrates them, and creates final commit
-- **No type checks**: orchestrator runs project verification after all fixes are integrated
+- **No Git operations**: orchestrator owns shared-cwd wave coordination, checkpoints, and final commit
+- **No type checks**: orchestrator runs project verification after each repair wave is coordinated
 - **No pushes**: never run `git push`
 - **Minimal fix**: the smallest diff that satisfies acceptance
-- **Report dependency drift**: if reference tracing reveals overlap with approved repair, stop before broadening scope and report candidate thread IDs/files/symbols in `dependency_findings`; do not decide repairs are independent
+- **Report dependency drift**: if reference tracing reveals overlap with approved repair, stop before broadening scope and report candidate thread IDs/files/symbols in `dependency_findings`; shared-parallel wave will be rolled back and rerun serially
 - **Escalate, don't decide**: if the fix requires a product, architecture, or scope decision not covered by the fix contract (e.g., "should we change the public API?", "which of two valid approaches?"), do NOT make the decision yourself. Stop, leave the code unchanged for that part, and report it in `concerns` with `recommended_next_step: needs human decision on <question>`. The orchestrator/user decides.

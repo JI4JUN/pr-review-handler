@@ -104,7 +104,7 @@ checkpoint 暂停执行。
 Phase 0: Setup
 Phase 1: Triage        ← 并行，只读
 Phase 1.5: Dependencies ← 构建修复依赖图
-Phase 2: Fix           ← 有依赖则串行；已证实独立的组隔离并行
+Phase 2: Fix           ← 有依赖则串行；已证实独立的修复共享 cwd 并行
 Phase 3: Reply         ← 由编排器直接起草
 Phase 4: Post & Push
 Phase 5: Report
@@ -147,7 +147,7 @@ review 级别的整体反馈。本阶段只做数据准备，不修改代码。
 
 ### Phase 2: Fix
 
-有依赖的修复按图顺序串行。仅已证实独立的修复组可并行，每组使用独立干净 Git worktree；补丁检查、整合后才进入后续波次。worktree 准备失败、补丁冲突或新发现重叠时，回退为串行。implementation agent 仍按 fix contract 做最小且已验收的修改。
+有依赖的修复按图顺序串行。仅文件和符号集合均已证实不相交的修复可在当前 cwd 并行；agent 只能改声明文件，且不能执行 Git 操作。编排器在每波后检查组合 diff；发现新重叠或异常变更时，整波回滚并串行重跑。implementation agent 仍按 fix contract 做最小且已验收的修改。
 
 全部整合后的修复提交为单个本地 commit，但 **不会推送**。
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.1
+
+### Shared-CWD parallel repair
+
+- Proven-independent fixes now run concurrently in the current working directory instead of isolated Git worktrees.
+- Parallel writers may edit only declared disjoint files and symbols; they cannot perform Git operations.
+- Orchestrator inspects combined wave diff, then rolls back and reruns the whole wave serially if it finds overlap, dependency drift, or unexpected changes.
+
 ## 1.5.0
 
 ### Dependency-aware repair orchestration

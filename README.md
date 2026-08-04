@@ -118,7 +118,7 @@ requested.
 Phase 0: Setup
 Phase 1: Triage        ← parallel, read-only
 Phase 1.5: Dependencies ← build repair dependency graph
-Phase 2: Fix           ← serial for dependencies; isolated parallel for proven-independent groups
+Phase 2: Fix           ← serial for dependencies; shared-CWD parallel for proven-independent fixes
 Phase 3: Reply         ← orchestrator drafts inline
 Phase 4: Post & Push
 Phase 5: Report
@@ -163,7 +163,7 @@ After confirmation, orchestrator compares each fix contract's affected files, mo
 
 ### Phase 2: Fix
 
-Dependent repairs run serially in graph order. Only proven-independent groups run concurrently, each in isolated clean Git worktree; patches are inspected and integrated before later waves. Setup failure, patch conflict, or newly discovered overlap falls back to serial execution. Each implementation agent still follows triage fix contract and applies only minimal accepted change.
+Dependent repairs run serially in graph order. Only proven-independent fixes run concurrently in current working directory; their complete file and symbol sets must be disjoint. Agents may edit only declared files and perform no Git operations. Orchestrator reviews combined diff after each wave; any new overlap or unexpected change rolls wave back and reruns it serially. Each implementation agent still follows triage fix contract and applies only minimal accepted change.
 
 All integrated fixes are committed as a single commit, but **never pushed** during this phase.
 
