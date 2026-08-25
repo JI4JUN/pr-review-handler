@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.2
+
+### discussion_r link dedup
+
+- Thread dedup gains a third rule: comments containing a `discussion_r<id>` link cluster with the thread that link points to.
+- Re-raised findings that moved to a new line after code changes no longer surface as duplicate threads in triage.
+
 ## 1.5.1
 
 ### Shared-CWD parallel repair
