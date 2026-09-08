@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.3
+
+### Pi subagent async dispatch for ambient MCP extensions
+
+- Explicitly require `async: true` when dispatching `pr-review-handler.triage` and `pr-review-handler.implementation` via Pi's `subagent` tool.
+- Prevents child agents from running as foreground children that fail to load parent ambient extensions (`mcp:codegraph`).
+
 ## 1.5.2
 
 ### discussion_r link dedup

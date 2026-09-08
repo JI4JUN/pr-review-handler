@@ -49,7 +49,7 @@ Agent specs live in `agents/` relative to this skill (`agents/triage-agent.md`, 
 
 **Dispatch pattern**: read relevant agent spec and dispatch one triage task per thread in parallel. After triage, orchestrator builds repair dependency graph: dependent repairs serial; only proven-independent fixes parallel in the shared current working directory.
 
-**Pi dispatch**: Pi uses optional `subagent` tool with project agents in `.agents/pr-review-handler/`. User runs `/pi-pr-review-handler-sync` before dispatch. Use `pr-review-handler.triage` for Phase 1 and `pr-review-handler.implementation` for Phase 2. If project agents or tool unavailable, fall back inline.
+**Pi dispatch**: Pi uses optional `subagent` tool with project agents in `.agents/pr-review-handler/`. User runs `/pi-pr-review-handler-sync` before dispatch. Use `pr-review-handler.triage` for Phase 1 and `pr-review-handler.implementation` for Phase 2. Always pass `async: true` when dispatching via `subagent` because both agents declare MCP tools (`mcp:codegraph`), which only load in background children (`async: true`). If project agents or tool unavailable, fall back inline.
 
 **Inline fallback**: if no `subagent` tool (Pi) or no subtask mechanism (other platforms), read each spec and execute its steps yourself, one thread at a time.
 
@@ -166,7 +166,8 @@ Do NOT auto-cp or auto-sync. Syncing is the user's responsibility via the `/pi-p
 
 Triage is read-only — safe to parallelize.
 
-- **Pi with `subagent` tool**: Use `pr-review-handler.triage` project agent. Spawn one per thread in PARALLEL mode. Pass `acceptance: { level: "none", reason: "triage is read-only verdict classification — no files changed, no tests, no commands; pr-review-handler manages its own output format" }`. Task prompt = input data ONLY (agent carries its own system prompt).
+- **Pi with `subagent` tool**: Use `pr-review-handler.triage` project agent. Spawn one per thread in PARALLEL mode with `async: true`. Pass `acceptance: { level: "none", reason: "triage is read-only verdict classification — no files changed, no tests, no commands; pr-review-handler manages its own output format" }`. Task prompt = input data ONLY (agent carries its own system prompt).
+  - **Why `async: true`**: Foreground children never load ambient extensions, causing child MCP tools (`codegraph_*`) to be missing from the registry. Background children (`async: true`) load ambient extensions properly.
   - **Why `level: "none"`**: pi-subagents infers `checked` for any task whose text contains words like "fix" (reviewer comments often do), and `checked` requires non-empty `tests-added` + `commands-run` evidence that a read-only triage agent cannot produce. A bare `acceptance: "attested"` is silently ignored — an explicit level can only *raise* above the inferred level, never lower it. Only `{ level: "none", reason }` disables the gate.
 - **Other platforms with subtask tool** (Task tool / background agent): embed `agents/triage-agent.md` spec into the task prompt + input data. Spawn one subtask per thread in parallel.
 - **No subtask mechanism**: run inline, one thread at a time.
@@ -294,7 +295,7 @@ For serial fixes, use current cwd and run one task at a time. Append completed r
 
 At Phase 2 start require empty `git status --porcelain` and record `REPAIR_BASE=$(git rev-parse HEAD)`. For a shared-parallel wave, launch one implementation task per proven-independent fix in PARALLEL mode with the same cwd. Each task may edit only its declared `affected_files`; it must not run `git add`, `git commit`, `git reset`, `git checkout`, `git clean`, `git rebase`, `git merge`, `git cherry-pick`, or `git push`. Orchestrator alone performs Git operations after all writers finish.
 
-Use `acceptance: { level: "none", reason: "implementation agents do not run verification and review fixes may add no tests; orchestrator owns shared-cwd wave coordination and final validation" }` for Pi agents. No subtask mechanism: execute serially in current cwd.
+Use `async: true` (required for background execution so `mcp:codegraph` tools in ambient extensions load) and `acceptance: { level: "none", reason: "implementation agents do not run verification and review fixes may add no tests; orchestrator owns shared-cwd wave coordination and final validation" }` for Pi agents. No subtask mechanism: execute serially in current cwd.
 
 ### Wave checkpoints and fallback
 
