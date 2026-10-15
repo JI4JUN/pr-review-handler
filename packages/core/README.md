@@ -31,13 +31,14 @@ node_modules/@trashcodermaker/pr-review-handler/
 └── skills/
     └── pr-review-handler/
         ├── SKILL.md              # the skill instructions
+        ├── scripts/              # helper scripts (fetch-threads.sh, resolve-threads.sh)
+        ├── references/           # guidelines & templates (reply-templates.md, review-taxonomies.md)
         └── agents/
             ├── triage-agent.md          # spec (inline mode)
             ├── implementation-agent.md  # spec
             └── pr-review-handler/       # project agent templates (pi-subagents)
                 ├── triage.md
                 └── implementation.md
-```
 
 Point your agent at `node_modules/@trashcodermaker/pr-review-handler/skills/pr-review-handler/SKILL.md`, or copy the `skills/pr-review-handler/` directory into your agent's skill discovery path.
 

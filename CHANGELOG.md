@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.6.0
+
+### Modular architecture, precision triage & root-cause implementation
+
+- **Modular skill layout & Progressive disclosure**:
+  - `SKILL.md` trimmed from 540 lines to ~190 lines (-64% context load).
+  - Standalone scripts in `scripts/`: `fetch-threads.sh` (GraphQL querying, diff hunks, deduplication, bot advisory extraction) and `resolve-threads.sh` (GraphQL thread resolution).
+  - Standalone references in `references/`: `reply-templates.md` (bilingual templates & AI footer) and `review-taxonomies.md` (intent classification & checkpoint presentation).
+  - Bot summary parsing: collapsed low-severity review findings (e.g. OpenCodeReview, CodeRabbit) are parsed into optional `advisory_items` at Checkpoint 1.
+- **Precision Triage**:
+  - Replaced procedural gate prose with a four-quadrant Decision Matrix and 4 Hard Negative Invariants (`No code_path no fix`, `Moved code is not a new bug`, `Discussion is not an action item`, `Never guess`).
+  - Compact conditional YAML schema: omitted fix contract for non-fix verdicts (-65% generation tokens).
+- **Architect-grade Implementation**:
+  - Eliminated symptom-suppressing "patchwork" fix directives.
+  - Enforced four core principles: Root-Cause over Band-Aid, Contract Bounded, Reference Closure (grep all callers), and Project Conventions First (`AGENTS.md`/`CLAUDE.md`).
+- **Massive token efficiency**:
+  - Runtime Phase 0 output token dump reduced by ~99% (writes directly to `/tmp/pr-context.json`).
+  - Overall agent prompt and output tokens reduced by 50%–60%.
+
 ## 1.5.3
 
 ### Pi subagent async dispatch for ambient MCP extensions

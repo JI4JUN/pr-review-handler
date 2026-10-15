@@ -125,19 +125,14 @@ Phase 5: Report
 ```
 
 ### Phase 0: Setup
-
-Identifies the target PR from the current branch or an explicit PR link,
-fetches unresolved review threads, and fetches review-level feedback. This
-phase prepares everything needed for triage without modifying code.
+Uses `scripts/fetch-threads.sh` to resolve the target PR, fetch unresolved review threads via a single GraphQL query, slice diff hunks, and extract review-level feedback and bot summary advisories (e.g. from OpenCodeReview or CodeRabbit) as optional Checkpoint 1 items. Prepares context without modifying code.
 
 ### Phase 1: Triage
+Evaluates comments against a **Four-Quadrant Decision Matrix** and **Four Hard Invariants** (No `code_path` no fix, moved code is not a new bug, discussion is not an action item, never guess):
 
-Reads the referenced code, PR diff context, and each review thread, then
-**verifies the reviewer's claim** and classifies every comment as:
-
-- `valid-fix` — claim **confirmed** with a concrete `code_path`; needs a code change
-- `valid-nofix` — claim has merit, but no code change on this PR
-- `invalid` — claim failed, already handled, or harmful suggested fix
+- `valid-fix` — PR-introduced defect, confirmed with concrete `code_path`; issues fix contract
+- `valid-nofix` — moved legacy code, architecture discussion, clarification, or intentional tradeoff
+- `invalid` — falsified by upstream guards, dead paths, flawed premises, or harmful suggested fixes
 
 Each verdict also carries evidence fields used at Checkpoint 1:
 
@@ -163,7 +158,7 @@ After confirmation, orchestrator compares each fix contract's affected files, mo
 
 ### Phase 2: Fix
 
-Dependent repairs run serially in graph order. Only proven-independent fixes run concurrently in current working directory; their complete file and symbol sets must be disjoint. Agents may edit only declared files and perform no Git operations. Orchestrator reviews combined diff after each wave; any new overlap or unexpected change rolls wave back and reruns it serially. Each implementation agent still follows triage fix contract and applies only minimal accepted change.
+Dependent repairs run serially in graph order. Only proven-independent fixes run concurrently in current working directory; their complete file and symbol sets must be disjoint. Agents may edit only declared files and perform no Git operations. Orchestrator reviews combined diff after each wave; any new overlap or unexpected change rolls wave back and reruns it serially. Implementation agents follow **root-cause placement** (fixing at the authoritative boundary rather than scattering defensive patches downstream) and complete acceptance criteria.
 
 All integrated fixes are committed as a single commit, but **never pushed** during this phase.
 
@@ -212,9 +207,10 @@ A concise summary is printed at the end:
 pr-review-handler/
 ├── skills/
 │   └── pr-review-handler/      # canonical skill (single source of truth)
-│       ├── SKILL.md
+│       ├── SKILL.md            # orchestrator state machine & gates
+│       ├── scripts/            # standalone execution scripts (fetch-threads.sh, resolve-threads.sh)
+│       ├── references/         # on-demand references (reply-templates.md, review-taxonomies.md)
 │       └── agents/             # triage + implementation agent specs
-├── packages/
 │   ├── core/                   # → npm: @trashcodermaker/pr-review-handler
 │   └── pi/                     # → npm: @trashcodermaker/pi-pr-review-handler
 ├── scripts/

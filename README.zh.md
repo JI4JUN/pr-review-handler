@@ -112,18 +112,15 @@ Phase 5: Report
 
 ### Phase 0: Setup
 
-根据当前分支或显式 PR 链接定位目标 PR，抓取未关闭的 review 线程，并补充抓取
-review 级别的整体反馈。本阶段只做数据准备，不修改代码。
+通过 `scripts/fetch-threads.sh` 定位目标 PR，单次 GraphQL 抓取未关闭的 review 线程与 diff 切片，并解析 review 级别总结与审查机器人（如 OpenCodeReview、CodeRabbit）的折叠建议（作为可选 Advisory 项）。本阶段只做数据准备，不修改代码。
 
 ### Phase 1: Triage
 
-读取评论所指代码、PR diff 上下文和完整 review 线程后，先 **验证评论者的 claim**，再分类为：
+基于**四象限决策矩阵与四条工程硬底线**（无 `code_path` 不修、历史代码搬迁不连带、探讨澄清不改代码、存疑不强答），将评论客观归类为：
 
-- `valid-fix` — claim 已 **confirmed** 且有具体 `code_path`，需要改代码
-- `valid-nofix` — claim 有道理，但本 PR 不改代码
-- `invalid` — claim 不成立、已被处理，或建议修复有害
-
-每条结论还带 Checkpoint 1 用的证据字段：
+- `valid-fix` — 明确属于本 PR 引入的缺陷，claim 已 **confirmed** 且有具体 `code_path`，签发修复契约
+- `valid-nofix` — 历史代码搬迁、纯架构探讨、澄清提问或意向取舍，本 PR 不改代码
+- `invalid` — 上游已守卫、不可达、断言不成立或建议修复有害
 
 | 字段 | 作用 |
 | --- | --- |
@@ -147,7 +144,7 @@ review 级别的整体反馈。本阶段只做数据准备，不修改代码。
 
 ### Phase 2: Fix
 
-有依赖的修复按图顺序串行。仅文件和符号集合均已证实不相交的修复可在当前 cwd 并行；agent 只能改声明文件，且不能执行 Git 操作。编排器在每波后检查组合 diff；发现新重叠或异常变更时，整波回滚并串行重跑。implementation agent 仍按 fix contract 做最小且已验收的修改。
+有依赖的修复按图顺序串行。仅文件和符号集合均已证实不相交的修复可在当前 cwd 并行；agent 只能改声明文件，且不能执行 Git 操作。编排器在每波后检查组合 diff；发现新重叠或异常变更时，整波回滚并串行重跑。implementation agent 遵循**根因定址**（在最高权威边界解决问题，杜绝表象打补丁）并严格按 fix contract 验收。
 
 全部整合后的修复提交为单个本地 commit，但 **不会推送**。
 
@@ -190,7 +187,9 @@ review 级别的整体反馈。本阶段只做数据准备，不修改代码。
 pr-review-handler/
 ├── skills/
 │   └── pr-review-handler/      # 规范 skill（单一真实来源）
-│       ├── SKILL.md
+│       ├── SKILL.md            # 编排状态机与门禁
+│       ├── scripts/            # 独立执行脚本 (fetch-threads.sh, resolve-threads.sh)
+│       ├── references/         # 按需参考文档 (reply-templates.md, review-taxonomies.md)
 │       └── agents/             # triage + implementation agent 规格
 ├── packages/
 │   ├── core/                   # → npm: @trashcodermaker/pr-review-handler
