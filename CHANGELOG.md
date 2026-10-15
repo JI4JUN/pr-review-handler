@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.6.1
+
+### Anti-ping-pong defenses & repository convention gating
+
+- **Repository Conventions First**:
+  - Triage and Implementation agents are instructed to read `AGENTS.md` / `CLAUDE.md` at the repository root first as the authoritative law of the codebase.
+  - Enforced Three Constitutional Pushback Gates:
+    - *Impossible Scenarios*: Reject defensive overkill for hypothetical inputs (e.g. throwing Proxies, astronomical error chains) when repo conventions mandate simplicity.
+    - *Pre-existing Baseline*: Defend surgical PR boundaries against adjacent baseline code smell.
+    - *Premature Abstraction*: Reject unrequested helper modules and multi-file refactoring.
+- **Blast Radius Lock & In-Place Minimal Fixes**:
+  - Strictly forbid creating new files or modules during review fix rounds. Fixes must be in-place and minimal.
+  - Forbid absolute guarantees and global promises in code comments (e.g. `// never raises`) that invite semantic contradiction checks.
+- **Diff Shrink Invariant**:
+  - In review rounds $\ge 2$, bias toward `valid-nofix` for non-critical feedback to guarantee PR convergence.
+- **Pure English normalization**:
+  - Eradicated all Chinese trigger phrases, internal strings, and templates from skill and agent files.
+
 ## 1.6.0
 
 ### Modular architecture, precision triage & root-cause implementation

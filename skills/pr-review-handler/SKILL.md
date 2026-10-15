@@ -6,12 +6,11 @@ description: >
   code review feedback, reviewer comments, or wants to respond to review
   threads on a pull request. Triggers include: "handle reviews",
   "respond to PR comments", "fix review feedback", "reply to reviewer",
-  "看看 PR 评论", "回一下 review", "处理 review 意见",
-  "reviewer 说的那个问题", or any mention of dealing with PR review
-  comments. Also triggers when the user pastes a PR link with unresolved
-  conversations, mentions a reviewer by name in the context of their PR,
-  or describes the situation: "someone left comments on my PR",
-  "帮我看看那些人提的意见", "CI 过了但 review 还没回".
+  "process review comments", "address PR feedback", or any mention of
+  dealing with PR review comments. Also triggers when the user pastes a PR
+  link with unresolved conversations, mentions a reviewer by name in the
+  context of their PR, or describes the situation: "someone left comments
+  on my PR", "CI passed but reviews need replies".
 metadata:
   starchild:
     emoji: "🔍"
@@ -89,9 +88,10 @@ pr_diff_context: <diff hunk from /tmp/pr-context.json>
 
 ### Triage Gates (Orchestrator Enforced)
 - `verdict: valid-fix` **REQUIRES** `claim_check: confirmed` AND non-empty `evidence.code_path` AND 2–4 checkable `acceptance` items.
+- **Repository Conventions First**: Agents read `AGENTS.md` / `CLAUDE.md` first. Repository conventions override reviewer suggestions: if a claim demands defensive handling for impossible runtime scenarios (contradicting simplicity rules), classify **`invalid`**. If a claim demands refactoring pre-existing code outside the PR's core diff, classify **`valid-nofix`**.
+- **Diff Shrink Invariant**: In round $\ge 2$, bias toward `valid-nofix` for all non-critical feedback to prevent review loops. In Phase 2, fixes must be in-place (no new files, minimal diff).
 - If claim is about base-branch code (`in_pr_diff: false`), default to `valid-nofix` unless it is a critical vulnerability.
 - `claim_check: insufficient` $\rightarrow$ surface **Need from user** (`evidence.missing`). Reference `references/review-taxonomies.md` for borderline taxonomy.
-
 ### Checkpoint 1: User Confirmation
 Present findings in three tables (see `references/review-taxonomies.md` for details):
 1. **Inline Review Threads** (`#`, `File:Line`, `Reviewer`, `Summary`, `Claim`, `In PR?`, `Verdict`, `Affected`).

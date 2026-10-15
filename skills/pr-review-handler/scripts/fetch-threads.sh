@@ -252,7 +252,6 @@ for (const c of (pr.comments?.nodes || [])) {
     }
   }
 }
-
 const contextData = {
   pr: {
     number: pr.number,
