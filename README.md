@@ -125,7 +125,7 @@ Phase 5: Report
 ```
 
 ### Phase 0: Setup
-Uses `scripts/fetch-threads.sh` to resolve the target PR, fetch unresolved review threads via a single GraphQL query, slice diff hunks, and extract review-level feedback and bot summary advisories (e.g. from OpenCodeReview or CodeRabbit) as optional Checkpoint 1 items. Prepares context without modifying code.
+Uses `scripts/fetch-threads.sh` to resolve the target PR, fetch unresolved review threads via a single GraphQL query, slice diff hunks, and extract review-level feedback and bot summary advisories as optional Checkpoint 1 items. **Enforces Branch Guard**: verifies the local branch matches `pr.head_branch`, automatically fetches and checks out the PR branch if needed, and ensures a clean working tree. Never applies fixes on `main` or a dirty branch. Prepares context without modifying code.
 
 ### Phase 1: Triage
 Evaluates comments against a **Four-Quadrant Decision Matrix** and **Four Hard Invariants** (No `code_path` no fix, moved code is not a new bug, discussion is not an action item, never guess):

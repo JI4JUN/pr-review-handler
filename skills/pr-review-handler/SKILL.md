@@ -54,18 +54,22 @@ Agent specs live in `agents/` relative to this skill.
 
 ## Phase 0: Setup
 
-1. Run the context-fetching script:
+1. **Context Fetch & Branch Guard**:
+   Run the context-fetching script:
    ```bash
    bash skills/pr-review-handler/scripts/fetch-threads.sh [PR_NUMBER_OR_URL]
    ```
-   This extracts:
-   - Unresolved inline threads with diff hunks $\rightarrow$ cached in `/tmp/pr-context.json`.
-   - Human review-level summaries (filtering machine markers).
-   - Bot summary advisory items (optional findings from OpenCodeReview, CodeRabbit, etc.).
-   - Local PR diff $\rightarrow$ `/tmp/pr-<number>.diff`.
+   This extracts unresolved threads, diff hunks, and PR metadata to `/tmp/pr-context.json`.
+
+   **Enforce Branch Guard**:
+   - Check current branch: `CURRENT_BRANCH=$(git branch --show-current)`.
+   - Inspect `pr.head_branch` in `/tmp/pr-context.json`. If `CURRENT_BRANCH` does not match `pr.head_branch`:
+     ```bash
+     git fetch origin && git checkout "<head_branch>"
+     ```
+   - Require clean tree: `git status --porcelain`. Never apply fixes on `main` or a dirty branch.
 
 2. On Pi, verify project agents exist (`test -f .agents/pr-review-handler/triage.md && test -f .agents/pr-review-handler/implementation.md`). If missing, advise running `/pi-pr-review-handler-sync` and fall back inline.
-
 ---
 
 ## Phase 1: Triage (Parallel Dispatch)

@@ -112,7 +112,7 @@ Phase 5: Report
 
 ### Phase 0: Setup
 
-通过 `scripts/fetch-threads.sh` 定位目标 PR，单次 GraphQL 抓取未关闭的 review 线程与 diff 切片，并解析 review 级别总结与审查机器人（如 OpenCodeReview、CodeRabbit）的折叠建议（作为可选 Advisory 项）。本阶段只做数据准备，不修改代码。
+通过 `scripts/fetch-threads.sh` 定位目标 PR，单次 GraphQL 抓取未关闭的 review 线程与 diff 切片，并解析 review 级别总结与审查机器人（如 OpenCodeReview、CodeRabbit）的折叠建议（作为可选 Advisory 项）。同时**强制执行分支守卫（Branch Guard）**：检查本地分支是否为 PR 的 `head_branch`，若不一致则自动 fetch 并切换到 PR 分支，确保工作区干净，严禁在 `main` 或脏工作树上应用修复。本阶段只做数据准备与环境就绪，不修改代码。
 
 ### Phase 1: Triage
 
